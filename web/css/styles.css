@@ -1,47 +1,59 @@
 /* =====================================================================
-   Painel de Vendas — tema "neon sobre roxo profundo".
-   Paleta pensada para leitura em tela grande de sala comercial: fundo
-   escuro para o número saltar, e cada série de dado com uma cor de
-   sinalização própria (ciano/magenta/lima/âmbar), nunca duas séries
-   vizinhas com o mesmo tom.
+   Painel de Vendas — tema "neon sobre vermelho Honda".
+   Vermelho como cor dominante (marca, botões, destaque de KPI, escala
+   do calendário), com ciano/âmbar/lima como subcores pontuais só onde
+   ajudam a distinguir uma série de dado da outra.
    ===================================================================== */
 :root {
-  --fundo: #140a26;
-  --fundo-2: #1c0f36;
-  --sidebar: #17092c;
-  --card: rgba(41, 21, 77, 0.82);
-  --card-borda: rgba(168, 130, 255, 0.16);
-  --card-borda-forte: rgba(168, 130, 255, 0.4);
+  --fundo: #1c0709;
+  --fundo-2: #290a0d;
+  --sidebar: #1a0709;
+  --card: rgba(46, 16, 19, 0.82);
+  --card-borda: rgba(255, 99, 99, 0.15);
+  --card-borda-forte: rgba(255, 99, 99, 0.4);
 
+  --vermelho: #ff2d43;
+  --vermelho-forte: #ff0033;
   --ciano: #2ce5f6;
   --magenta: #ff3ea5;
-  --roxo: #a855f7;
   --lima: #7dff8a;
   --ambar: #ffd166;
   --laranja: #ff8a3d;
 
-  --texto: #f4eeff;
-  --texto-suave: #a493cf;
-  --texto-fraco: #7a6aa5;
+  --texto: #fbeeee;
+  --texto-suave: #cc9a9c;
+  --texto-fraco: #8f5f61;
 }
 
 * { box-sizing: border-box; }
-html, body { height: 100%; margin: 0; }
+html { background-color: var(--fundo); }
+html, body { margin: 0; }
 
 body {
   font-family: 'Outfit', 'Segoe UI', Arial, sans-serif;
   background:
-    radial-gradient(1200px 600px at 8% -5%, rgba(168, 85, 247, 0.28), transparent 60%),
-    radial-gradient(900px 500px at 95% 0%, rgba(44, 229, 246, 0.14), transparent 55%),
-    radial-gradient(800px 600px at 60% 100%, rgba(255, 62, 165, 0.14), transparent 60%),
+    radial-gradient(1200px 600px at 8% -5%, rgba(255, 45, 67, 0.3), transparent 60%),
+    radial-gradient(900px 500px at 95% 0%, rgba(44, 229, 246, 0.12), transparent 55%),
+    radial-gradient(800px 600px at 60% 100%, rgba(255, 138, 61, 0.16), transparent 60%),
     linear-gradient(160deg, var(--fundo) 0%, var(--fundo-2) 100%);
   /* Sem 'background-attachment: fixed': o gradiente fixo so pinta o
      viewport, e em captura de pagina inteira o resto sai sem fundo,
-     deixando os cards semi-transparentes lavados. */
+     deixando os cards semi-transparentes lavados. background-color
+     solido serve de base imediata sob o gradiente, pra nunca deixar
+     branco do canvas aparecer num frame de repaint durante o scroll. */
+  background-color: var(--fundo);
   background-repeat: no-repeat;
   color: var(--texto);
   min-height: 100vh;
 }
+
+/* Scrollbar escura: o padrão do Chrome/Windows é uma trilha clara, que
+   pisca como uma faixa branca contra este tema escuro ao rolar. */
+* { scrollbar-color: rgba(255, 99, 99, 0.45) rgba(0, 0, 0, 0.25); scrollbar-width: thin; }
+::-webkit-scrollbar { width: 11px; height: 11px; }
+::-webkit-scrollbar-track { background: var(--fundo-2); }
+::-webkit-scrollbar-thumb { background: rgba(255, 99, 99, 0.4); border-radius: 20px; border: 2px solid var(--fundo-2); }
+::-webkit-scrollbar-thumb:hover { background: rgba(255, 99, 99, 0.65); }
 
 .app { display: flex; min-height: 100vh; }
 
@@ -66,8 +78,8 @@ body {
   width: 38px; height: 38px; border-radius: 12px;
   display: grid; place-items: center;
   font-weight: 800; font-size: 19px; color: #17092c;
-  background: linear-gradient(135deg, var(--ciano), var(--roxo) 55%, var(--magenta));
-  box-shadow: 0 6px 20px rgba(168, 85, 247, 0.5);
+  background: linear-gradient(135deg, var(--vermelho), var(--laranja) 70%, var(--ambar));
+  box-shadow: 0 6px 20px rgba(255, 45, 67, 0.5);
 }
 .marca strong { display: block; font-size: 15px; letter-spacing: 0.3px; }
 .marca small { color: var(--texto-suave); font-size: 11px; letter-spacing: 2.4px; text-transform: uppercase; }
@@ -82,10 +94,10 @@ body {
   font: inherit; font-size: 13.5px; font-weight: 600;
   transition: background 0.18s ease, color 0.18s ease;
 }
-.nav-item:hover { background: rgba(168, 130, 255, 0.1); color: var(--texto); }
+.nav-item:hover { background: rgba(255, 99, 99, 0.1); color: var(--texto); }
 .nav-item.active {
   color: #fff;
-  background: linear-gradient(100deg, rgba(168, 85, 247, 0.45), rgba(44, 229, 246, 0.16));
+  background: linear-gradient(100deg, rgba(255, 45, 67, 0.5), rgba(255, 138, 61, 0.18));
   box-shadow: inset 0 0 0 1px var(--card-borda-forte);
 }
 .nav-ic { opacity: 0.85; }
@@ -104,7 +116,7 @@ body {
   padding: 9px 13px; border-radius: 10px; text-align: left; width: 100%;
   transition: background 0.18s ease, color 0.18s ease;
 }
-.loja-item:hover { background: rgba(168, 130, 255, 0.1); color: var(--texto); }
+.loja-item:hover { background: rgba(255, 99, 99, 0.1); color: var(--texto); }
 .loja-item.active { color: #fff; background: rgba(44, 229, 246, 0.14); box-shadow: inset 0 0 0 1px rgba(44, 229, 246, 0.35); }
 .loja-item .ponto { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
 .loja-item .qtd { font-size: 11px; color: var(--texto-fraco); font-variant-numeric: tabular-nums; }
@@ -145,11 +157,11 @@ body {
 }
 .seletor-mes button {
   width: 28px; height: 28px; border-radius: 8px; border: none; cursor: pointer;
-  background: rgba(168, 130, 255, 0.12); color: var(--texto);
+  background: rgba(255, 99, 99, 0.12); color: var(--texto);
   font-size: 17px; line-height: 1; display: grid; place-items: center;
   transition: background 0.18s ease;
 }
-.seletor-mes button:hover:not(:disabled) { background: rgba(168, 130, 255, 0.3); }
+.seletor-mes button:hover:not(:disabled) { background: rgba(255, 99, 99, 0.3); }
 .seletor-mes button:disabled { opacity: 0.3; cursor: not-allowed; }
 .seletor-mes span { min-width: 132px; text-align: center; font-size: 13.5px; font-weight: 600; }
 /* So a primeira letra: 'capitalize' deixaria "Setembro De 2026". */
@@ -180,12 +192,18 @@ main { padding: 22px 26px 40px; display: flex; flex-direction: column; gap: 16px
 .card-nota { font-size: 11px; color: var(--texto-fraco); }
 .card-legenda { margin: 12px 0 0; font-size: 11.5px; color: var(--texto-suave); text-align: center; line-height: 1.5; }
 
-.grid-topo { display: grid; grid-template-columns: repeat(3, 1fr) 1.15fr 1.15fr; gap: 14px; }
-.grid-meio { display: grid; grid-template-columns: 1.6fr 1fr; gap: 14px; }
-.grid-baixo { display: grid; grid-template-columns: 1.35fr 1fr; gap: 14px; }
+/* minmax(0, ...) e não só 'Nfr': sem o mínimo zerado, uma track de
+   grid nunca encolhe além do min-content do que está dentro dela. Um
+   canvas do Chart.js tem largura fixa em pixel (atributo width, não
+   CSS), então sem isso ele empurra a track — e o card inteiro — para
+   fora da viewport na primeira vez que a janela fica menor do que
+   quando o gráfico foi desenhado. */
+.grid-topo { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)) minmax(0, 1.15fr) minmax(0, 1.15fr); gap: 14px; }
+.grid-meio { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: 14px; }
+.grid-baixo { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); gap: 14px; }
 
 @media (max-width: 1500px) {
-  .grid-topo { grid-template-columns: repeat(3, 1fr); }
+  .grid-topo { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .card-destaque, .card-barras { grid-column: span 1; }
 }
 @media (max-width: 1100px) {
@@ -208,7 +226,7 @@ main { padding: 22px 26px 40px; display: flex; flex-direction: column; gap: 16px
 .card-destaque { display: flex; flex-direction: column; }
 .numero-gigante {
   font-size: 33px; font-weight: 800; letter-spacing: -1px; line-height: 1.1;
-  background: linear-gradient(100deg, var(--ciano), var(--roxo) 60%, var(--magenta));
+  background: linear-gradient(100deg, var(--vermelho), var(--laranja) 60%, var(--ambar));
   -webkit-background-clip: text; background-clip: text; color: transparent;
 }
 .sub-kpis { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: auto; padding-top: 18px; }
@@ -234,30 +252,38 @@ main { padding: 22px 26px 40px; display: flex; flex-direction: column; gap: 16px
   color: var(--texto-fraco); padding-bottom: 4px; font-weight: 700;
 }
 .cal-dia {
+  position: relative;
   aspect-ratio: 1 / 0.82; border-radius: 9px;
-  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
   border: 1px solid rgba(255, 255, 255, 0.05);
   font-variant-numeric: tabular-nums;
 }
-.cal-dia .num { font-size: 12px; font-weight: 600; color: var(--texto-suave); }
-.cal-dia .qtd { font-size: 12.5px; font-weight: 800; }
+/* Numero do dia sempre no canto, como em qualquer calendario — nunca
+   se confunde com o total de vendas, que fica grande e central com o
+   rotulo "vendas" por baixo. */
+.cal-dia .cal-data { position: absolute; top: 5px; left: 7px; font-size: 10px; font-weight: 700; color: var(--texto-fraco); }
+.cal-dia .cal-total { font-size: 17px; font-weight: 800; line-height: 1; margin-top: 6px; }
+.cal-dia .cal-rotulo { font-size: 8px; font-weight: 700; letter-spacing: 0.6px; text-transform: uppercase; color: rgba(255, 255, 255, 0.55); margin-top: 2px; }
 .cal-dia.vazio { border: none; background: transparent; }
-.cal-dia.hoje { outline: 2px solid var(--ciano); outline-offset: 1px; }
+.cal-dia.hoje { outline: 2px solid var(--ambar); outline-offset: 1px; }
+.cal-dia.hoje .cal-data { color: var(--ambar); }
 .cal-dia.n0 { background: rgba(255, 255, 255, 0.035); }
-.cal-dia.n1 { background: rgba(168, 85, 247, 0.3); }
-.cal-dia.n2 { background: rgba(168, 85, 247, 0.55); }
-.cal-dia.n3 { background: linear-gradient(135deg, rgba(168, 85, 247, 0.8), rgba(255, 62, 165, 0.7)); }
-.cal-dia.n4 { background: linear-gradient(135deg, var(--magenta), var(--laranja)); }
-.cal-dia.n1 .num, .cal-dia.n2 .num, .cal-dia.n3 .num, .cal-dia.n4 .num { color: rgba(255, 255, 255, 0.8); }
+.cal-dia.n0 .cal-total { color: var(--texto-fraco); }
+.cal-dia.n0 .cal-rotulo { color: var(--texto-fraco); }
+.cal-dia.n1 { background: rgba(255, 45, 67, 0.28); }
+.cal-dia.n2 { background: rgba(255, 45, 67, 0.55); }
+.cal-dia.n3 { background: linear-gradient(135deg, rgba(255, 45, 67, 0.85), rgba(255, 138, 61, 0.75)); }
+.cal-dia.n4 { background: linear-gradient(135deg, var(--vermelho-forte), var(--ambar)); }
+.cal-dia.n1 .cal-data, .cal-dia.n2 .cal-data, .cal-dia.n3 .cal-data, .cal-dia.n4 .cal-data { color: rgba(255, 255, 255, 0.75); }
 
 .calendario-escala { display: flex; align-items: center; gap: 5px; margin-top: 12px; justify-content: flex-end; }
 .calendario-escala small { color: var(--texto-fraco); font-size: 10.5px; }
 .escala-caixa { width: 15px; height: 12px; border-radius: 4px; }
 .escala-caixa.n0 { background: rgba(255, 255, 255, 0.035); }
-.escala-caixa.n1 { background: rgba(168, 85, 247, 0.3); }
-.escala-caixa.n2 { background: rgba(168, 85, 247, 0.55); }
-.escala-caixa.n3 { background: linear-gradient(135deg, rgba(168, 85, 247, 0.8), rgba(255, 62, 165, 0.7)); }
-.escala-caixa.n4 { background: linear-gradient(135deg, var(--magenta), var(--laranja)); }
+.escala-caixa.n1 { background: rgba(255, 45, 67, 0.28); }
+.escala-caixa.n2 { background: rgba(255, 45, 67, 0.55); }
+.escala-caixa.n3 { background: linear-gradient(135deg, rgba(255, 45, 67, 0.85), rgba(255, 138, 61, 0.75)); }
+.escala-caixa.n4 { background: linear-gradient(135deg, var(--vermelho-forte), var(--ambar)); }
 
 /* ===== ranking de vendedores ===== */
 .ranking-lista { display: flex; flex-direction: column; gap: 9px; }
@@ -308,10 +334,10 @@ select:focus, input:focus { outline: none; border-color: var(--ciano); box-shado
 .btn-row { display: flex; gap: 10px; grid-column: 1 / -1; flex-wrap: wrap; }
 button { cursor: pointer; border: none; border-radius: 10px; padding: 11px 20px; font: inherit; font-weight: 700; font-size: 13.5px; }
 .btn-primary {
-  background: linear-gradient(100deg, var(--roxo), var(--magenta));
-  color: #fff; box-shadow: 0 8px 22px rgba(255, 62, 165, 0.28);
+  background: linear-gradient(100deg, var(--vermelho), var(--laranja));
+  color: #fff; box-shadow: 0 8px 22px rgba(255, 45, 67, 0.32);
 }
-.btn-secondary { background: rgba(168, 130, 255, 0.14); color: var(--texto); border: 1px solid var(--card-borda); }
+.btn-secondary { background: rgba(255, 99, 99, 0.14); color: var(--texto); border: 1px solid var(--card-borda); }
 .status-msg { font-size: 12.5px; margin: 12px 0 0; min-height: 16px; }
 .status-msg.ok { color: var(--lima); }
 .status-msg.err { color: var(--magenta); }
@@ -334,8 +360,9 @@ button { cursor: pointer; border: none; border-radius: 10px; padding: 11px 20px;
 
   .calendario { gap: 3px; }
   .cal-dia { border-radius: 6px; }
-  .cal-dia .num { font-size: 10px; }
-  .cal-dia .qtd { font-size: 11px; }
+  .cal-dia .cal-data { font-size: 8.5px; top: 3px; left: 5px; }
+  .cal-dia .cal-total { font-size: 13px; margin-top: 4px; }
+  .cal-dia .cal-rotulo { font-size: 6.5px; }
   .cal-cabecalho { font-size: 8.5px; letter-spacing: 0.4px; }
 
   .aneis-grid { grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); }
@@ -344,4 +371,52 @@ button { cursor: pointer; border: none; border-radius: 10px; padding: 11px 20px;
   .sub-kpis b { font-size: 15px; }
   .chart-box { height: 200px; }
   .chart-box--alto { height: 230px; }
+
+  .celebracao { top: 12px; width: calc(100vw - 24px); }
+  .celebracao-cartao { min-width: 0; width: 100%; padding: 12px 16px 12px 12px; }
+}
+
+/* ==================== CELEBRAÇÃO DE VENDA ====================
+   Toast animado disparado ao registrar uma venda no formulário,
+   mostrando quem vendeu e qual carro — feedback rápido e chamativo
+   sem travar o restante da tela (pointer-events: none no wrapper). */
+.celebracao {
+  position: fixed; top: 26px; left: 50%; z-index: 999;
+  transform: translateX(-50%) translateY(-16px) scale(0.96);
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.25s ease, transform 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.celebracao.mostrar { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
+
+.celebracao-cartao {
+  display: flex; align-items: center; gap: 14px;
+  min-width: 320px;
+  background: linear-gradient(100deg, var(--vermelho), var(--laranja) 85%);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 16px;
+  padding: 14px 24px 14px 16px;
+  box-shadow: 0 20px 55px rgba(255, 45, 67, 0.5), 0 0 0 1px rgba(0, 0, 0, 0.15);
+  color: #fff;
+}
+.celebracao-icone {
+  font-size: 30px; flex-shrink: 0;
+  filter: drop-shadow(0 2px 5px rgba(0, 0, 0, 0.3));
+  animation: buzina 0.7s ease-in-out infinite;
+}
+@keyframes buzina {
+  0%, 100% { transform: translateX(0) rotate(0deg); }
+  25% { transform: translateX(-2px) rotate(-6deg); }
+  75% { transform: translateX(2px) rotate(6deg); }
+}
+.celebracao-texto b { display: block; font-size: 15px; font-weight: 800; }
+.celebracao-texto small { display: block; font-size: 12.5px; opacity: 0.92; margin-top: 2px; }
+
+.confete {
+  position: fixed; top: -14px; z-index: 998; pointer-events: none;
+  width: 8px; height: 14px;
+  animation-name: cair-confete; animation-timing-function: cubic-bezier(0.35, 0, 0.65, 1); animation-fill-mode: forwards;
+}
+@keyframes cair-confete {
+  0% { transform: translateY(0) rotate(0deg); opacity: 1; }
+  100% { transform: translateY(105vh) rotate(560deg); opacity: 0; }
 }

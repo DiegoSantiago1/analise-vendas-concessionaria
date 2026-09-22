@@ -6,14 +6,14 @@
 const API = "/api";
 
 const PALETA = {
+  vermelho: "#ff2d43",
   ciano: "#2ce5f6",
   magenta: "#ff3ea5",
-  roxo: "#a855f7",
   lima: "#7dff8a",
   ambar: "#ffd166",
   laranja: "#ff8a3d",
 };
-const SEQUENCIA = [PALETA.ciano, PALETA.magenta, PALETA.roxo, PALETA.lima, PALETA.ambar, PALETA.laranja];
+const SEQUENCIA = [PALETA.vermelho, PALETA.ciano, PALETA.laranja, PALETA.lima, PALETA.ambar, PALETA.magenta];
 
 const estado = {
   lojaSelecionada: null, // null = todas as lojas
@@ -89,7 +89,7 @@ function renderSidebar() {
   lista.innerHTML = itens
     .map((loja, i) => {
       const ativo = estado.lojaSelecionada === loja.id ? "active" : "";
-      const cor = loja.id ? SEQUENCIA[(i - 1) % SEQUENCIA.length] : PALETA.roxo;
+      const cor = loja.id ? SEQUENCIA[(i - 1) % SEQUENCIA.length] : PALETA.vermelho;
       const qtd = loja.id
         ? vendasPorLoja.get(loja.nome) ?? 0
         : (estado.analytics.rankingLojas || []).reduce((s, l) => s + l.quantidade, 0);
@@ -182,7 +182,7 @@ function renderPainel() {
   graficos.donutMeta = criarDonut(
     "donutMeta",
     [Math.min(acumuladoTotal, metaTotal), Math.max(0, metaTotal - acumuladoTotal)],
-    [pctMeta >= 100 ? PALETA.lima : PALETA.ciano, "rgba(255,255,255,0.06)"],
+    [pctMeta >= 100 ? PALETA.lima : PALETA.vermelho, "rgba(255,255,255,0.06)"],
     graficos.donutMeta
   );
 
@@ -320,7 +320,7 @@ function renderGraficoLojas(ranking) {
           data: ranking.map((l) => l.quantidade),
           backgroundColor: (ctx) => {
             const { ctx: c, chartArea } = ctx.chart;
-            if (!chartArea) return PALETA.roxo;
+            if (!chartArea) return PALETA.vermelho;
             const cor = SEQUENCIA[ctx.dataIndex % SEQUENCIA.length];
             const g = c.createLinearGradient(chartArea.left, 0, chartArea.right, 0);
             g.addColorStop(0, `${cor}33`);
@@ -378,9 +378,10 @@ function renderCalendario(porDia) {
     const nivel = qtd === 0 ? 0 : Math.min(4, Math.ceil((qtd / maior) * 4));
     const ehHoje = iso === hoje ? "hoje" : "";
     return `
-      <div class="cal-dia n${nivel} ${ehHoje}" title="${dataLocal(iso).toLocaleDateString("pt-BR")}: ${qtd} carro(s)">
-        <span class="num">${numero}</span>
-        <span class="qtd">${qtd || ""}</span>
+      <div class="cal-dia n${nivel} ${ehHoje}" title="${dataLocal(iso).toLocaleDateString("pt-BR")}: ${qtd} carro(s) vendido(s)">
+        <span class="cal-data">${numero}</span>
+        <span class="cal-total">${qtd}</span>
+        <span class="cal-rotulo">${qtd === 1 ? "venda" : "vendas"}</span>
       </div>`;
   }).join("");
 
@@ -460,6 +461,38 @@ function renderFeed() {
     .join("");
 }
 
+// ==================== CELEBRAÇÃO DE VENDA ====================
+const CORES_CONFETE = [PALETA.vermelho, PALETA.laranja, PALETA.ambar, PALETA.ciano, PALETA.lima];
+let timerCelebracao = null;
+
+function celebrarVenda({ vendedor, modelo, loja, quantidade }) {
+  const el = document.getElementById("celebracaoVenda");
+  el.innerHTML = `
+    <div class="celebracao-cartao">
+      <span class="celebracao-icone">🚗</span>
+      <div class="celebracao-texto">
+        <b>${vendedor} vendeu!</b>
+        <small>${quantidade}x ${modelo} · ${loja}</small>
+      </div>
+    </div>`;
+  el.classList.add("mostrar");
+
+  for (let i = 0; i < 28; i++) {
+    const peca = document.createElement("span");
+    peca.className = "confete";
+    peca.style.left = `${Math.random() * 100}vw`;
+    peca.style.background = CORES_CONFETE[i % CORES_CONFETE.length];
+    peca.style.borderRadius = Math.random() > 0.5 ? "50%" : "2px";
+    peca.style.animationDuration = `${1.5 + Math.random() * 1.3}s`;
+    peca.style.animationDelay = `${Math.random() * 0.25}s`;
+    document.body.appendChild(peca);
+    setTimeout(() => peca.remove(), 3200);
+  }
+
+  clearTimeout(timerCelebracao);
+  timerCelebracao = setTimeout(() => el.classList.remove("mostrar"), 3400);
+}
+
 // ==================== FORMULÁRIOS ====================
 function popularFormularios() {
   const selLoja = document.getElementById("selLoja");
@@ -511,6 +544,12 @@ document.getElementById("formVenda").addEventListener("submit", async (evento) =
     if (!resposta.ok) throw new Error(dados.erro || "Erro ao registrar venda.");
     status.textContent = "Venda registrada!";
     status.className = "status-msg ok";
+    celebrarVenda({
+      vendedor: document.getElementById("selVendedor").selectedOptions[0]?.textContent || "Vendedor",
+      modelo: document.getElementById("selModelo").selectedOptions[0]?.textContent || "carro",
+      loja: document.getElementById("selLoja").selectedOptions[0]?.textContent || "",
+      quantidade: corpo.quantidade,
+    });
     document.getElementById("txtCliente").value = "";
     document.getElementById("numQtd").value = 1;
     await carregarTudo();
@@ -566,3 +605,16 @@ document.getElementById("formVendedor").addEventListener("submit", async (evento
 // ==================== INÍCIO ====================
 carregarTudo();
 setInterval(carregarTudo, 30000);
+
+/* Depois de vários ciclos de destroy()+new Chart() no mesmo canvas
+ * (troca de loja, de mês, nova venda), o ResizeObserver interno do
+ * Chart.js às vezes não recalcula a largura do canvas quando a janela
+ * muda de tamanho depois disso — o canvas fica "preso" na largura de
+ * quando foi criado e empurra o card para fora da tela. Forçar
+ * resize() em todo gráfico vivo corrige isso de forma explícita. */
+window.addEventListener("resize", () => {
+  Object.values(graficos).forEach((g) => {
+    if (Array.isArray(g)) g.forEach((c) => c?.resize());
+    else g?.resize();
+  });
+});
