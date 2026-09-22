@@ -1,0 +1,22 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: honda-vendas-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USER:-honda}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-honda_dev_pw}
+      POSTGRES_DB: ${DB_NAME:-vendas_honda}
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./db/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-honda} -d ${DB_NAME:-vendas_honda}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  pgdata:
