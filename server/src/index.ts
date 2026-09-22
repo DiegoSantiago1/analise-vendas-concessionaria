@@ -5,6 +5,7 @@ import { verificarConexao } from "./db.js";
 import { bootstrapRouter } from "./routes/bootstrap.js";
 import { vendasRouter } from "./routes/vendas.js";
 import { vendedoresRouter } from "./routes/vendedores.js";
+import { analyticsRouter } from "./routes/analytics.js";
 
 const app = express();
 app.use(cors());
@@ -17,6 +18,7 @@ app.get("/api/health", (_req, res) => {
 app.use("/api/bootstrap", bootstrapRouter);
 app.use("/api/vendas", vendasRouter);
 app.use("/api/vendedores", vendedoresRouter);
+app.use("/api/analytics", analyticsRouter);
 
 // Serve o front-end (web/) direto por este mesmo servidor, pra rodar
 // tudo com um único comando em desenvolvimento.
