@@ -101,7 +101,9 @@ Cada projeto importante deve mostrar: problema, contexto, objetivo, tecnologias,
 
 **Disponibilidade:** Diego estuda das 19:00 às 23:30, depois do trabalho. Para cronograma, assumir cerca de 15 a 20 horas por semana de ritmo sustentável, e não as 22 horas teóricas.
 
-**Ambiente da máquina (verificado em 21/09/2026):** Git 2.55, VS Code e Power BI Desktop instalados. **Python é só o atalho da Microsoft Store (não está instalado de verdade), e não há Node, Docker nem PostgreSQL.** O passo 0 é instalar Python, Docker Desktop (com PostgreSQL em container) e Node. A pasta Dados_Honda ainda não é um repositório git.
+**Ambiente da máquina (configurado em 21/09/2026):** Windows 11 Home. Instalados: Git 2.55, VS Code, Power BI Desktop, Python 3.14.7 (`%LOCALAPPDATA%\Programs\Python\Python314`), Node 24 LTS, GitHub CLI (`gh`, logado como DiegoSantiago1) e Docker Desktop 4.91 com WSL2 (o WSL2 só passa a valer depois de reiniciar o Windows). PostgreSQL vai rodar em container Docker, sem instalação local. Dica: o atalho `python` da Microsoft Store pode aparecer antes do Python real no PATH de sessões antigas; abrir um terminal novo ou usar `.venv\Scripts\python.exe`.
+
+**Repositório:** https://github.com/DiegoSantiago1/analise-vendas-concessionaria (**privado**; só tornar público depois de revisar que não há dados reais da empresa e ajustar este CLAUDE.md). Ambiente Python isolado em `.venv` (ignorado pelo git); dependências em `requirements.txt`. Dados brutos em `data/raw/` ficam fora do git.
 
 ---
 
