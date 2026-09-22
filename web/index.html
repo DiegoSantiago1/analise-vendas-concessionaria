@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Painel de Vendas — Grupo Horizonte Honda</title>
+  <meta name="description" content="Painel de acompanhamento de vendas em tempo real de uma rede fictícia de concessionárias Honda, com ranking por loja/vendedor, metas e lançamento de vendas.">
+  <link rel="stylesheet" href="css/styles.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+</head>
+<body>
+
+  <div class="ambient-bg">
+    <div class="glow g1"></div>
+    <div class="glow g2"></div>
+    <div class="glow g3"></div>
+  </div>
+
+  <header class="hero">
+    <div class="live-badge"><span class="live-dot"></span> AO VIVO</div>
+    <div class="hero-texto">
+      <h1>Grupo Horizonte Honda</h1>
+      <p>Painel de acompanhamento de vendas — dados fictícios para fins de portfólio</p>
+    </div>
+    <div class="hero-data" id="dataHoje"></div>
+  </header>
+
+  <nav class="tabs">
+    <button class="tab-btn active" data-tab="dashboard">📊 Painel</button>
+    <button class="tab-btn" data-tab="lancamento">📝 Lançar venda</button>
+  </nav>
+
+  <div class="ticker-wrap">
+    <div class="ticker-track" id="tickerTrack">Carregando últimas vendas...</div>
+  </div>
+
+  <main>
+    <!-- ===================== DASHBOARD ===================== -->
+    <section class="view active" id="view-dashboard">
+
+      <div class="highlight-row">
+        <div class="kpi-hero" id="kpiHero">
+          <div class="kpi-label">🚗 Vendido Hoje</div>
+          <div class="kpi-value" id="kpiVendidoHoje">0</div>
+        </div>
+        <div class="spotlight-card">
+          <div class="spotlight-label">Loja Líder (hoje)</div>
+          <div class="spotlight-nome" id="spotLoja">—</div>
+          <div class="spotlight-valor" id="spotLojaValor"></div>
+        </div>
+        <div class="spotlight-card">
+          <div class="spotlight-label">Vendedor Líder (hoje)</div>
+          <div class="spotlight-nome" id="spotVendedor">—</div>
+          <div class="spotlight-valor" id="spotVendedorValor"></div>
+        </div>
+      </div>
+
+      <section class="panel">
+        <h2>🎯 Metas do mês, por loja</h2>
+        <div class="metas-grid" id="metasGrid"></div>
+      </section>
+
+      <section class="charts-grid">
+        <div class="panel">
+          <h2>🏆 Ranking por loja (hoje)</h2>
+          <div class="podium" id="podioLoja"></div>
+          <div class="chart-box"><canvas id="chartLoja"></canvas></div>
+        </div>
+        <div class="panel">
+          <h2>🏆 Ranking por vendedor (hoje)</h2>
+          <div class="podium" id="podioVendedor"></div>
+          <div class="chart-box"><canvas id="chartVendedor"></canvas></div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-header-row">
+          <h2>📅 Ranking da semana</h2>
+          <span class="panel-subtitulo">segunda-feira até hoje</span>
+        </div>
+        <div class="charts-grid">
+          <div><div class="podium" id="podioLojaSemana"></div><div class="chart-box chart-box--curto"><canvas id="chartLojaSemana"></canvas></div></div>
+          <div><div class="podium" id="podioVendedorSemana"></div><div class="chart-box chart-box--curto"><canvas id="chartVendedorSemana"></canvas></div></div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>🕒 Últimos lançamentos</h2>
+        <div class="feed-scroll" id="feedUltimos"></div>
+      </section>
+
+    </section>
+
+    <!-- ===================== LANÇAMENTO ===================== -->
+    <section class="view" id="view-lancamento">
+
+      <div class="panel">
+        <h2>Registrar venda</h2>
+        <form id="formVenda" class="form-grid">
+          <div>
+            <label for="selLoja">Loja</label>
+            <select id="selLoja" required></select>
+          </div>
+          <div>
+            <label for="selVendedor">Vendedor</label>
+            <select id="selVendedor" required></select>
+          </div>
+          <div>
+            <label for="selModelo">Modelo</label>
+            <select id="selModelo" required></select>
+          </div>
+          <div>
+            <label for="selFormaPagamento">Forma de pagamento</label>
+            <select id="selFormaPagamento" required>
+              <option value="A vista">À vista</option>
+              <option value="Financiado">Financiado</option>
+              <option value="Consorcio">Consórcio</option>
+            </select>
+          </div>
+          <div>
+            <label for="numQtd">Quantidade</label>
+            <input id="numQtd" type="number" min="1" value="1" required>
+          </div>
+          <div>
+            <label for="txtCliente">Cliente (opcional)</label>
+            <input id="txtCliente" type="text" placeholder="Nome do cliente">
+          </div>
+          <div class="btn-row">
+            <button type="submit" class="btn-primary">Registrar venda</button>
+            <button type="button" class="btn-secondary" id="btnDesfazer">Desfazer última</button>
+          </div>
+        </form>
+        <p class="status-msg" id="statusVenda"></p>
+      </div>
+
+      <div class="panel">
+        <h2>Cadastro rápido de vendedor</h2>
+        <form id="formVendedor" class="form-grid">
+          <div>
+            <label for="cadLoja">Loja</label>
+            <select id="cadLoja" required></select>
+          </div>
+          <div>
+            <label for="cadNome">Nome do vendedor</label>
+            <input id="cadNome" type="text" required>
+          </div>
+          <div class="btn-row">
+            <button type="submit" class="btn-secondary">Adicionar ao cadastro</button>
+          </div>
+        </form>
+        <p class="status-msg" id="statusVendedor"></p>
+      </div>
+
+    </section>
+  </main>
+
+  <footer class="credito">
+    Painel de vendas com dados fictícios — Node.js · TypeScript · PostgreSQL · Docker
+  </footer>
+
+  <script src="js/app.js"></script>
+</body>
+</html>

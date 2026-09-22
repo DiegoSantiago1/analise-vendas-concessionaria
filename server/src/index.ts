@@ -1,5 +1,6 @@
 import express, { type ErrorRequestHandler } from "express";
 import cors from "cors";
+import path from "node:path";
 import { verificarConexao } from "./db.js";
 import { bootstrapRouter } from "./routes/bootstrap.js";
 import { vendasRouter } from "./routes/vendas.js";
@@ -16,6 +17,11 @@ app.get("/api/health", (_req, res) => {
 app.use("/api/bootstrap", bootstrapRouter);
 app.use("/api/vendas", vendasRouter);
 app.use("/api/vendedores", vendedoresRouter);
+
+// Serve o front-end (web/) direto por este mesmo servidor, pra rodar
+// tudo com um único comando em desenvolvimento.
+const pastaWeb = path.resolve(import.meta.dirname, "../../web");
+app.use(express.static(pastaWeb));
 
 // Handler de erro central: qualquer exceção não tratada numa rota (o
 // Express 5 encaminha automaticamente até rejeições de Promise em

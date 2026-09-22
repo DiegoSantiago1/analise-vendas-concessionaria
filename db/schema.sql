@@ -1,4 +1,13 @@
 -- =====================================================================
+-- Fuso horário: por padrão, o Postgres roda em UTC no container. Sem
+-- isso, perto da virada do dia (21h-24h em Recife = 00h-03h UTC), uma
+-- venda lançada "à noite de ontem" apareceria como se fosse de amanhã
+-- em qualquer consulta que use CURRENT_DATE ou now() - errado para um
+-- negócio que opera em horário do Brasil.
+-- =====================================================================
+ALTER DATABASE vendas_honda SET timezone TO 'America/Recife';
+
+-- =====================================================================
 -- Schema: Painel de Vendas - Grupo Horizonte Honda (dados fictícios)
 --
 -- Modelo relacional para o feirão de vendas: lojas, equipe comercial,
