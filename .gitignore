@@ -1,0 +1,29 @@
+﻿# Ambiente Python
+.venv/
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+
+# Segredos e configuracao local
+.env
+.env.*
+!.env.example
+
+# Node
+node_modules/
+
+# Docker: dados dos volumes
+pgdata/
+
+# Editor / SO
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Claude Code: configuracao local
+.claude/settings.local.json
+
+# Dados brutos: nunca versionar dados reais da empresa
+data/raw/
+*.log
