@@ -7,13 +7,13 @@ const API = "/api";
 
 const PALETA = {
   vermelho: "#ff2d43",
-  ciano: "#2ce5f6",
-  magenta: "#ff3ea5",
-  lima: "#7dff8a",
-  ambar: "#ffd166",
+  bordo: "#b0132a",
   laranja: "#ff8a3d",
+  ambar: "#ffd166",
+  prata: "#c9ccd6",
+  lima: "#7dff8a", // reservado pra sinal de sucesso (meta batida) — não entra no ciclo decorativo
 };
-const SEQUENCIA = [PALETA.vermelho, PALETA.ciano, PALETA.laranja, PALETA.lima, PALETA.ambar, PALETA.magenta];
+const SEQUENCIA = [PALETA.vermelho, PALETA.ambar, PALETA.prata, PALETA.laranja, PALETA.bordo];
 
 const estado = {
   lojaSelecionada: null, // null = todas as lojas
@@ -259,17 +259,17 @@ function renderGraficoDiario(porDia) {
         {
           label: "Carros vendidos",
           data: porDia.map((d) => d.quantidade),
-          borderColor: PALETA.ciano,
+          borderColor: PALETA.ambar,
           borderWidth: 2.5,
           tension: 0.38,
           pointRadius: 0,
           pointHoverRadius: 5,
-          pointHoverBackgroundColor: PALETA.ciano,
+          pointHoverBackgroundColor: PALETA.ambar,
           fill: true,
           backgroundColor: (ctx) => {
             const { ctx: c, chartArea } = ctx.chart;
             if (!chartArea) return "transparent";
-            return gradienteVertical(c, chartArea, "rgba(44,229,246,0.42)", "rgba(44,229,246,0)");
+            return gradienteVertical(c, chartArea, "rgba(255,209,102,0.35)", "rgba(255,209,102,0)");
           },
         },
       ],
@@ -282,8 +282,8 @@ function renderGraficoDiario(porDia) {
       plugins: {
         legend: { display: false },
         tooltip: {
-          backgroundColor: "rgba(23,9,44,0.95)",
-          borderColor: "rgba(168,130,255,0.4)",
+          backgroundColor: "rgba(10,4,5,0.95)",
+          borderColor: "rgba(255,70,70,0.35)",
           borderWidth: 1,
           padding: 11,
           callbacks: {
@@ -295,8 +295,8 @@ function renderGraficoDiario(porDia) {
         },
       },
       scales: {
-        x: { ticks: { color: "#7a6aa5", maxRotation: 0, autoSkipPadding: 18, font: { size: 11 } }, grid: { display: false } },
-        y: { beginAtZero: true, ticks: { color: "#7a6aa5", precision: 0, font: { size: 11 } }, grid: { color: "rgba(255,255,255,0.05)" } },
+        x: { ticks: { color: "#8f6567", maxRotation: 0, autoSkipPadding: 18, font: { size: 11 } }, grid: { display: false } },
+        y: { beginAtZero: true, ticks: { color: "#8f6567", precision: 0, font: { size: 11 } }, grid: { color: "rgba(255,255,255,0.05)" } },
       },
     },
   });
@@ -340,13 +340,13 @@ function renderGraficoLojas(ranking) {
       plugins: {
         legend: { display: false },
         tooltip: {
-          backgroundColor: "rgba(23,9,44,0.95)",
+          backgroundColor: "rgba(10,4,5,0.95)",
           padding: 10,
           callbacks: { label: (item) => `  ${item.raw} carro(s) · ${moedaCurta(ranking[item.dataIndex].faturamento)}` },
         },
       },
       scales: {
-        x: { beginAtZero: true, ticks: { color: "#7a6aa5", precision: 0, font: { size: 11 } }, grid: { color: "rgba(255,255,255,0.05)" } },
+        x: { beginAtZero: true, ticks: { color: "#8f6567", precision: 0, font: { size: 11 } }, grid: { color: "rgba(255,255,255,0.05)" } },
         y: { ticks: { color: "#f4eeff", font: { size: 12, weight: "600" } }, grid: { display: false } },
       },
     },
@@ -462,7 +462,7 @@ function renderFeed() {
 }
 
 // ==================== CELEBRAÇÃO DE VENDA ====================
-const CORES_CONFETE = [PALETA.vermelho, PALETA.laranja, PALETA.ambar, PALETA.ciano, PALETA.lima];
+const CORES_CONFETE = [PALETA.vermelho, PALETA.laranja, PALETA.ambar, PALETA.prata, PALETA.bordo];
 let timerCelebracao = null;
 
 function celebrarVenda({ vendedor, modelo, loja, quantidade }) {

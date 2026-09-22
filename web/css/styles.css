@@ -1,28 +1,31 @@
 /* =====================================================================
-   Painel de Vendas — tema "neon sobre vermelho Honda".
-   Vermelho como cor dominante (marca, botões, destaque de KPI, escala
-   do calendário), com ciano/âmbar/lima como subcores pontuais só onde
-   ajudam a distinguir uma série de dado da outra.
+   Painel de Vendas — tema "vermelho sobre preto", carro/oficina Honda:
+   fundo quase preto, vermelho como cor dominante (marca, botões,
+   destaque de KPI, escala do calendário), dourado e prata como as
+   duas únicas subcores decorativas (pra diferenciar série de dado
+   sem virar um arco-íris neon). Verde fica reservado só pra sinal de
+   status positivo (ao vivo, meta batida, venda registrada) — nunca
+   usado à toa.
    ===================================================================== */
 :root {
-  --fundo: #1c0709;
-  --fundo-2: #290a0d;
-  --sidebar: #1a0709;
-  --card: rgba(46, 16, 19, 0.82);
-  --card-borda: rgba(255, 99, 99, 0.15);
-  --card-borda-forte: rgba(255, 99, 99, 0.4);
+  --fundo: #0a0405;
+  --fundo-2: #170709;
+  --sidebar: #090304;
+  --card: rgba(24, 9, 11, 0.85);
+  --card-borda: rgba(255, 70, 70, 0.13);
+  --card-borda-forte: rgba(255, 70, 70, 0.38);
 
   --vermelho: #ff2d43;
   --vermelho-forte: #ff0033;
-  --ciano: #2ce5f6;
-  --magenta: #ff3ea5;
-  --lima: #7dff8a;
-  --ambar: #ffd166;
+  --bordo: #b0132a;
   --laranja: #ff8a3d;
+  --ambar: #ffd166;
+  --prata: #c9ccd6;
+  --lima: #7dff8a;
 
-  --texto: #fbeeee;
-  --texto-suave: #cc9a9c;
-  --texto-fraco: #8f5f61;
+  --texto: #f7eeee;
+  --texto-suave: #b98d8f;
+  --texto-fraco: #7a5254;
 }
 
 * { box-sizing: border-box; }
@@ -32,9 +35,8 @@ html, body { margin: 0; }
 body {
   font-family: 'Outfit', 'Segoe UI', Arial, sans-serif;
   background:
-    radial-gradient(1200px 600px at 8% -5%, rgba(255, 45, 67, 0.3), transparent 60%),
-    radial-gradient(900px 500px at 95% 0%, rgba(44, 229, 246, 0.12), transparent 55%),
-    radial-gradient(800px 600px at 60% 100%, rgba(255, 138, 61, 0.16), transparent 60%),
+    radial-gradient(1100px 550px at 10% -5%, rgba(255, 45, 67, 0.22), transparent 60%),
+    radial-gradient(800px 550px at 92% 100%, rgba(255, 138, 61, 0.1), transparent 60%),
     linear-gradient(160deg, var(--fundo) 0%, var(--fundo-2) 100%);
   /* Sem 'background-attachment: fixed': o gradiente fixo so pinta o
      viewport, e em captura de pagina inteira o resto sai sem fundo,
@@ -61,7 +63,7 @@ body {
 .sidebar {
   width: 232px;
   flex-shrink: 0;
-  background: linear-gradient(180deg, rgba(23, 9, 44, 0.96), rgba(23, 9, 44, 0.8));
+  background: linear-gradient(180deg, rgba(9, 3, 4, 0.97), rgba(9, 3, 4, 0.82));
   border-right: 1px solid var(--card-borda);
   padding: 22px 16px;
   display: flex;
@@ -117,14 +119,17 @@ body {
   transition: background 0.18s ease, color 0.18s ease;
 }
 .loja-item:hover { background: rgba(255, 99, 99, 0.1); color: var(--texto); }
-.loja-item.active { color: #fff; background: rgba(44, 229, 246, 0.14); box-shadow: inset 0 0 0 1px rgba(44, 229, 246, 0.35); }
+.loja-item.active { color: #fff; background: rgba(255, 45, 67, 0.16); box-shadow: inset 0 0 0 1px rgba(255, 45, 67, 0.4); }
 .loja-item .ponto { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
 .loja-item .qtd { font-size: 11px; color: var(--texto-fraco); font-variant-numeric: tabular-nums; }
-.loja-item.active .qtd { color: var(--ciano); }
+.loja-item.active .qtd { color: var(--ambar); }
 
 .sidebar-rodape { margin-top: auto; padding-top: 18px; display: flex; flex-direction: column; gap: 7px; }
 .sidebar-rodape small { color: var(--texto-fraco); font-size: 10.5px; letter-spacing: 0.4px; }
 
+/* Verde só aqui e no status de sucesso do formulário — sinal de
+   "positivo/ao vivo" de propósito diferente do resto do painel, que é
+   só vermelho/preto/dourado/prata. */
 .badge-live {
   display: inline-flex; align-items: center; gap: 7px; width: fit-content;
   background: rgba(125, 255, 138, 0.1); border: 1px solid rgba(125, 255, 138, 0.35);
@@ -293,13 +298,13 @@ main { padding: 22px 26px 40px; display: flex; flex-direction: column; gap: 16px
   display: grid; place-items: center; font-size: 11.5px; font-weight: 800;
   background: rgba(255, 255, 255, 0.06); color: var(--texto-suave);
 }
-.ranking-item:nth-child(1) .ranking-pos { background: linear-gradient(135deg, var(--ambar), var(--laranja)); color: #2b1055; }
-.ranking-item:nth-child(2) .ranking-pos { background: rgba(200, 210, 255, 0.35); color: #fff; }
+.ranking-item:nth-child(1) .ranking-pos { background: linear-gradient(135deg, var(--ambar), var(--laranja)); color: #260a0c; }
+.ranking-item:nth-child(2) .ranking-pos { background: rgba(201, 204, 214, 0.35); color: #fff; }
 .ranking-item:nth-child(3) .ranking-pos { background: rgba(255, 138, 61, 0.35); color: #fff; }
 .ranking-info { flex: 1; min-width: 0; }
 .ranking-info b { display: block; font-size: 13px; font-weight: 600; }
 .ranking-info small { color: var(--texto-fraco); font-size: 11px; }
-.ranking-valor { font-weight: 800; font-size: 14px; font-variant-numeric: tabular-nums; color: var(--ciano); }
+.ranking-valor { font-weight: 800; font-size: 14px; font-variant-numeric: tabular-nums; color: var(--prata); }
 
 /* ===== anéis de meta ===== */
 .aneis-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 14px; }
@@ -318,7 +323,7 @@ main { padding: 22px 26px 40px; display: flex; flex-direction: column; gap: 16px
   border-radius: 11px; padding: 9px 13px; font-size: 12.5px;
 }
 .feed-item .feed-hora { color: var(--texto-fraco); font-size: 11px; font-variant-numeric: tabular-nums; }
-.feed-item .tag-loja { background: rgba(44, 229, 246, 0.12); color: var(--ciano); padding: 2px 9px; border-radius: 8px; font-size: 10.5px; font-weight: 700; }
+.feed-item .tag-loja { background: rgba(201, 204, 214, 0.14); color: var(--prata); padding: 2px 9px; border-radius: 8px; font-size: 10.5px; font-weight: 700; }
 .feed-item b { color: var(--ambar); font-weight: 600; }
 
 /* ===== formulários ===== */
@@ -327,10 +332,10 @@ label { display: block; font-size: 10.5px; color: var(--texto-fraco); margin-bot
 select, input {
   width: 100%; padding: 11px 13px; border-radius: 10px;
   border: 1px solid var(--card-borda);
-  background: rgba(20, 10, 38, 0.8); color: var(--texto);
+  background: rgba(8, 3, 4, 0.85); color: var(--texto);
   font: inherit; font-size: 13.5px;
 }
-select:focus, input:focus { outline: none; border-color: var(--ciano); box-shadow: 0 0 0 3px rgba(44, 229, 246, 0.14); }
+select:focus, input:focus { outline: none; border-color: var(--vermelho); box-shadow: 0 0 0 3px rgba(255, 45, 67, 0.16); }
 .btn-row { display: flex; gap: 10px; grid-column: 1 / -1; flex-wrap: wrap; }
 button { cursor: pointer; border: none; border-radius: 10px; padding: 11px 20px; font: inherit; font-weight: 700; font-size: 13.5px; }
 .btn-primary {
@@ -340,7 +345,7 @@ button { cursor: pointer; border: none; border-radius: 10px; padding: 11px 20px;
 .btn-secondary { background: rgba(255, 99, 99, 0.14); color: var(--texto); border: 1px solid var(--card-borda); }
 .status-msg { font-size: 12.5px; margin: 12px 0 0; min-height: 16px; }
 .status-msg.ok { color: var(--lima); }
-.status-msg.err { color: var(--magenta); }
+.status-msg.err { color: var(--vermelho-forte); }
 
 .vazio-msg { color: var(--texto-fraco); font-size: 12.5px; text-align: center; padding: 26px 10px; }
 
