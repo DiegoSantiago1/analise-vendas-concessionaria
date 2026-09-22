@@ -27,3 +27,8 @@ Thumbs.db
 # Dados brutos: nunca versionar dados reais da empresa
 data/raw/
 *.log
+
+# Referencia do projeto original do trabalho (contem nomes reais de funcionarios,
+# metas de venda e nome de colega). NUNCA deve ser commitado.
+scipt.html
+original/
