@@ -32,3 +32,6 @@ data/raw/
 # metas de venda e nome de colega). NUNCA deve ser commitado.
 scipt.html
 original/
+
+# Contexto pessoal e plano de carreira usado pelo Claude Code: fica so na maquina local.
+CLAUDE.md
