@@ -35,3 +35,6 @@ original/
 
 # Contexto pessoal e plano de carreira usado pelo Claude Code: fica so na maquina local.
 CLAUDE.md
+
+# Saida do build da demo (gerada por scripts/build_demo.mjs)
+demo/dist/

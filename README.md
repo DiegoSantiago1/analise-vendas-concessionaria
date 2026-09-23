@@ -4,6 +4,8 @@ Painel analítico de vendas para uma rede fictícia de concessionárias Honda: m
 
 ![Painel de vendas](docs/screenshots/painel.png)
 
+**[▶ Abrir a demo online](https://diegosantiago1.github.io/Portifolio/projetos/painel-vendas/)**: roda no navegador, com os dados fictícios. O back-end completo (PostgreSQL e API) roda localmente, veja [Como rodar localmente](#como-rodar-localmente) e [Demo online](#demo-online).
+
 ## Contexto
 
 Este projeto nasceu de um sistema real que uso no meu trabalho como Analista Administrativo de Vendas numa concessionária Honda: uma planilha com Google Apps Script que a equipe usava para acompanhar vendas do dia e meta do mês. Ele fazia o trabalho, mas tinha limitações que valia a pena resolver como projeto de estudo — e eu não podia simplesmente publicar o original, porque continha nomes reais de funcionários e metas comerciais confidenciais da empresa.
@@ -108,6 +110,19 @@ npm run dev
 ```
 
 Acesse **http://localhost:3333**.
+
+## Demo online
+
+O GitHub Pages só serve arquivos estáticos, então a demo não usa o Node nem o PostgreSQL. O mesmo front-end (`web/`) roda com uma camada que responde às chamadas `/api/` dentro do próprio navegador, sobre os dados fictícios exportados do banco.
+
+```bash
+python scripts/exportar_demo.py   # banco -> demo/demo-data.json
+node scripts/build_demo.mjs       # gera demo/dist: front-end + camada de API
+```
+
+- `demo/demo-api.js` refaz em JavaScript as consultas que na versão real são SQL (`SUM`/`GROUP BY`). Comparei as respostas dela com as da API real (8 consultas por mês e por loja, o cadastro e os últimos lançamentos) e são idênticas.
+- O histórico é reancorado no dia em que a página abre, então "hoje" sempre tem movimento.
+- Lançamentos feitos na demo ficam só na memória da página: recarregar volta ao estado inicial.
 
 ## Funcionalidades
 
