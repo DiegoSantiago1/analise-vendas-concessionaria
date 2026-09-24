@@ -1,39 +1,5 @@
-import express, { type ErrorRequestHandler } from "express";
-import cors from "cors";
-import path from "node:path";
-import { verificarConexao } from "./db.js";
-import { bootstrapRouter } from "./routes/bootstrap.js";
-import { vendasRouter } from "./routes/vendas.js";
-import { vendedoresRouter } from "./routes/vendedores.js";
-import { analyticsRouter } from "./routes/analytics.js";
-
-const app = express();
-app.use(cors());
-app.use(express.json());
-
-app.get("/api/health", (_req, res) => {
-  res.json({ ok: true });
-});
-
-app.use("/api/bootstrap", bootstrapRouter);
-app.use("/api/vendas", vendasRouter);
-app.use("/api/vendedores", vendedoresRouter);
-app.use("/api/analytics", analyticsRouter);
-
-// Serve o front-end (web/) direto por este mesmo servidor, pra rodar
-// tudo com um único comando em desenvolvimento.
-const pastaWeb = path.resolve(import.meta.dirname, "../../web");
-app.use(express.static(pastaWeb));
-
-// Handler de erro central: qualquer exceção não tratada numa rota (o
-// Express 5 encaminha automaticamente até rejeições de Promise em
-// handlers async) cai aqui, em vez de derrubar o processo ou vazar o
-// stack trace pro cliente.
-const tratadorDeErros: ErrorRequestHandler = (err, _req, res, _next) => {
-  console.error("Erro não tratado:", err);
-  res.status(500).json({ erro: "Erro interno no servidor." });
-};
-app.use(tratadorDeErros);
+import { app } from "./app.js";
+import { pool, verificarConexao } from "./db.js";
 
 const PORTA = Number(process.env.PORT ?? 3333);
 
@@ -46,9 +12,25 @@ async function iniciar() {
     process.exit(1);
   }
 
-  app.listen(PORTA, () => {
+  const servidor = app.listen(PORTA, () => {
     console.log(`API rodando em http://localhost:${PORTA}`);
   });
+
+  servidor.on("error", (err) => {
+    console.error(`Não foi possível abrir a porta ${PORTA} (já tem outro processo usando?):`, err.message);
+    process.exit(1);
+  });
+
+  // Desligamento limpo: para de aceitar conexões e devolve as do pool ao
+  // Postgres, em vez de deixá-las penduradas até o banco derrubar por timeout.
+  for (const sinal of ["SIGINT", "SIGTERM"] as const) {
+    process.once(sinal, () => {
+      servidor.close(() => {
+        pool.end().finally(() => process.exit(0));
+      });
+      servidor.closeIdleConnections(); // conexões keep-alive paradas atrasariam o close()
+    });
+  }
 }
 
 iniciar();
