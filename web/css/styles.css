@@ -24,8 +24,8 @@
   --lima: #7dff8a;
 
   --texto: #f7eeee;
-  --texto-suave: #b98d8f;
-  --texto-fraco: #7a5254;
+  --texto-suave: #d1abae;
+  --texto-fraco: #b08386; /* 5:1 no pior fundo (brilho vermelho do topo); o antigo #7a5254 dava 2,9:1 */
 }
 
 * { box-sizing: border-box; }
@@ -343,6 +343,7 @@ button { cursor: pointer; border: none; border-radius: 10px; padding: 11px 20px;
   color: #fff; box-shadow: 0 8px 22px rgba(255, 45, 67, 0.32);
 }
 .btn-secondary { background: rgba(255, 99, 99, 0.14); color: var(--texto); border: 1px solid var(--card-borda); }
+.btn-secondary:disabled { opacity: 0.45; cursor: not-allowed; }
 .status-msg { font-size: 12.5px; margin: 12px 0 0; min-height: 16px; }
 .status-msg.ok { color: var(--lima); }
 .status-msg.err { color: var(--vermelho-forte); }

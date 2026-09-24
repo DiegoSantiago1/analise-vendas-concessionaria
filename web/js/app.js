@@ -20,8 +20,7 @@ const estado = {
   mes: null,             // 'YYYY-MM'; null = mês corrente (definido pela API)
   bootstrap: null,
   analytics: null,
-  totalHojeConhecido: 0,
-  primeiraCarga: true,
+  ultimaVendaId: null,   // id da última venda lançada NESTA sessão (só ela pode ser desfeita)
 };
 
 const graficos = { diario: null, lojas: null, donutMeta: null, donutCategoria: null, donutPagamento: null, aneis: [] };
@@ -36,8 +35,12 @@ function moedaCurta(valor) {
   return `R$ ${fmtInt.format(Math.round(n))}`;
 }
 
-function moedaCheia(valor) {
-  return Number(valor || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
+/** Escapa texto antes de entrar em innerHTML. Nome de cliente, de vendedor,
+ *  de loja e de modelo vêm do banco e, em última instância, de quem digita:
+ *  sem escapar, um "<img onerror=...>" digitado num campo executaria como
+ *  código no navegador de todo mundo que abrir o painel (XSS armazenado). */
+function esc(valor) {
+  return String(valor ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
 }
 
 /** Converte 'YYYY-MM-DD' em Date local, sem passar por UTC (evita o
@@ -96,7 +99,7 @@ function renderSidebar() {
       return `
         <button class="loja-item ${ativo}" data-loja="${loja.id ?? ""}">
           <span class="ponto" style="background:${cor}"></span>
-          <span style="flex:1">${loja.nome}</span>
+          <span style="flex:1">${esc(loja.nome)}</span>
           <span class="qtd">${qtd}</span>
         </button>`;
     })
@@ -190,7 +193,7 @@ function renderPainel() {
   const totalCategoria = porCategoria.reduce((s, c) => s + c.quantidade, 0);
   document.getElementById("donutCategoriaTotal").textContent = fmtInt.format(totalCategoria);
   document.getElementById("legendaCategoria").innerHTML = porCategoria
-    .map((c, i) => `<span style="color:${SEQUENCIA[i % SEQUENCIA.length]}">●</span> ${c.categoria} ${c.quantidade}`)
+    .map((c, i) => `<span style="color:${SEQUENCIA[i % SEQUENCIA.length]}">●</span> ${esc(c.categoria)} ${c.quantidade}`)
     .join(" &nbsp; ") || "sem vendas no mês";
   graficos.donutCategoria = criarDonut(
     "donutCategoria",
@@ -204,7 +207,7 @@ function renderPainel() {
   const financiado = porFormaPagamento.find((f) => f.forma_pagamento === "Financiado")?.quantidade ?? 0;
   document.getElementById("donutPagamentoPct").textContent = totalPgto ? `${Math.round((financiado / totalPgto) * 100)}%` : "0%";
   document.getElementById("legendaPagamento").innerHTML = porFormaPagamento
-    .map((f, i) => `<span style="color:${SEQUENCIA[(i + 2) % SEQUENCIA.length]}">●</span> ${f.forma_pagamento} ${f.quantidade}`)
+    .map((f, i) => `<span style="color:${SEQUENCIA[(i + 2) % SEQUENCIA.length]}">●</span> ${esc(f.forma_pagamento)} ${f.quantidade}`)
     .join(" &nbsp; ") || "sem vendas no mês";
   graficos.donutPagamento = criarDonut(
     "donutPagamento",
@@ -223,7 +226,7 @@ function renderPainel() {
           const largura = Math.round((m.quantidade / maiorModelo) * 100);
           return `
             <div class="barra-item">
-              <div class="barra-topo"><span>${m.modelo}</span><b>${m.quantidade}</b></div>
+              <div class="barra-topo"><span>${esc(m.modelo)}</span><b>${m.quantidade}</b></div>
               <div class="barra-trilho">
                 <div class="barra-preenchida" style="width:${largura}%;background:linear-gradient(90deg, ${cor}, ${cor}55)"></div>
               </div>
@@ -295,8 +298,8 @@ function renderGraficoDiario(porDia) {
         },
       },
       scales: {
-        x: { ticks: { color: "#8f6567", maxRotation: 0, autoSkipPadding: 18, font: { size: 11 } }, grid: { display: false } },
-        y: { beginAtZero: true, ticks: { color: "#8f6567", precision: 0, font: { size: 11 } }, grid: { color: "rgba(255,255,255,0.05)" } },
+        x: { ticks: { color: "#b08386", maxRotation: 0, autoSkipPadding: 18, font: { size: 11 } }, grid: { display: false } },
+        y: { beginAtZero: true, ticks: { color: "#b08386", precision: 0, font: { size: 11 } }, grid: { color: "rgba(255,255,255,0.05)" } },
       },
     },
   });
@@ -346,7 +349,7 @@ function renderGraficoLojas(ranking) {
         },
       },
       scales: {
-        x: { beginAtZero: true, ticks: { color: "#8f6567", precision: 0, font: { size: 11 } }, grid: { color: "rgba(255,255,255,0.05)" } },
+        x: { beginAtZero: true, ticks: { color: "#b08386", precision: 0, font: { size: 11 } }, grid: { color: "rgba(255,255,255,0.05)" } },
         y: { ticks: { color: "#f4eeff", font: { size: 12, weight: "600" } }, grid: { display: false } },
       },
     },
@@ -400,7 +403,7 @@ function renderVendedores(ranking) {
       (v, i) => `
       <div class="ranking-item">
         <div class="ranking-pos">${i + 1}</div>
-        <div class="ranking-info"><b>${v.vendedor}</b><small>${v.loja} · ${moedaCurta(v.faturamento)}</small></div>
+        <div class="ranking-info"><b>${esc(v.vendedor)}</b><small>${esc(v.loja)} · ${moedaCurta(v.faturamento)}</small></div>
         <div class="ranking-valor">${v.quantidade}</div>
       </div>`
     )
@@ -421,7 +424,7 @@ function renderAneisMetas(metas) {
             <canvas id="anel-${m.loja_id}"></canvas>
             <div class="anel-centro"><b style="color:${pct >= 100 ? PALETA.lima : SEQUENCIA[i % SEQUENCIA.length]}">${pct}%</b></div>
           </div>
-          <div class="anel-nome">${m.loja}</div>
+          <div class="anel-nome">${esc(m.loja)}</div>
           <div class="anel-sub">${m.acumulado} / ${m.meta_mensal} carros</div>
         </div>`;
     })
@@ -451,11 +454,11 @@ function renderFeed() {
     .map((v) => {
       const dt = new Date(v.criado_em);
       const quando = `${dt.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })} ${dt.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}`;
-      const cliente = v.cliente_nome ? ` para <b>${v.cliente_nome}</b>` : "";
+      const cliente = v.cliente_nome ? ` para <b>${esc(v.cliente_nome)}</b>` : "";
       return `<div class="feed-item">
           <span class="feed-hora">${quando}</span>
-          <span class="tag-loja">${v.loja_nome}</span>
-          <span><b>${v.vendedor_nome}</b> vendeu ${v.quantidade}x ${v.modelo_nome}${cliente}</span>
+          <span class="tag-loja">${esc(v.loja_nome)}</span>
+          <span><b>${esc(v.vendedor_nome)}</b> vendeu ${v.quantidade}x ${esc(v.modelo_nome)}${cliente}</span>
         </div>`;
     })
     .join("");
@@ -471,8 +474,8 @@ function celebrarVenda({ vendedor, modelo, loja, quantidade }) {
     <div class="celebracao-cartao">
       <span class="celebracao-icone">🚗</span>
       <div class="celebracao-texto">
-        <b>${vendedor} vendeu!</b>
-        <small>${quantidade}x ${modelo} · ${loja}</small>
+        <b>${esc(vendedor)} vendeu!</b>
+        <small>${quantidade}x ${esc(modelo)} · ${esc(loja)}</small>
       </div>
     </div>`;
   el.classList.add("mostrar");
@@ -497,14 +500,14 @@ function celebrarVenda({ vendedor, modelo, loja, quantidade }) {
 function popularFormularios() {
   const selLoja = document.getElementById("selLoja");
   const cadLoja = document.getElementById("cadLoja");
-  const opcoes = estado.bootstrap.lojas.map((l) => `<option value="${l.id}">${l.nome}</option>`).join("");
+  const opcoes = estado.bootstrap.lojas.map((l) => `<option value="${l.id}">${esc(l.nome)}</option>`).join("");
   if (selLoja.options.length !== estado.bootstrap.lojas.length) {
     selLoja.innerHTML = opcoes;
     cadLoja.innerHTML = opcoes;
   }
   const selModelo = document.getElementById("selModelo");
   if (!selModelo.options.length) {
-    selModelo.innerHTML = estado.bootstrap.modelos.map((m) => `<option value="${m.id}">${m.nome}</option>`).join("");
+    selModelo.innerHTML = estado.bootstrap.modelos.map((m) => `<option value="${m.id}">${esc(m.nome)}</option>`).join("");
   }
   atualizarVendedores();
 }
@@ -514,7 +517,7 @@ function atualizarVendedores() {
   const sel = document.getElementById("selVendedor");
   const daLoja = estado.bootstrap.vendedores.filter((v) => v.loja_id === lojaId);
   sel.innerHTML = daLoja.length
-    ? daLoja.map((v) => `<option value="${v.id}">${v.nome}</option>`).join("")
+    ? daLoja.map((v) => `<option value="${v.id}">${esc(v.nome)}</option>`).join("")
     : '<option value="">(sem vendedor nessa loja)</option>';
 }
 document.getElementById("selLoja").addEventListener("change", atualizarVendedores);
@@ -544,6 +547,8 @@ document.getElementById("formVenda").addEventListener("submit", async (evento) =
     if (!resposta.ok) throw new Error(dados.erro || "Erro ao registrar venda.");
     status.textContent = "Venda registrada!";
     status.className = "status-msg ok";
+    estado.ultimaVendaId = dados.id;
+    atualizarBotaoDesfazer();
     celebrarVenda({
       vendedor: document.getElementById("selVendedor").selectedOptions[0]?.textContent || "Vendedor",
       modelo: document.getElementById("selModelo").selectedOptions[0]?.textContent || "carro",
@@ -559,16 +564,29 @@ document.getElementById("formVenda").addEventListener("submit", async (evento) =
   }
 });
 
+// "Desfazer" só vale para a venda lançada por esta própria sessão: apagar "a
+// última venda do banco" podia remover o lançamento de outra pessoa.
+function atualizarBotaoDesfazer() {
+  const botao = document.getElementById("btnDesfazer");
+  botao.disabled = estado.ultimaVendaId === null;
+  botao.title = botao.disabled ? "Disponível depois que você lançar uma venda" : "Remove a venda que você acabou de lançar";
+}
+atualizarBotaoDesfazer();
+
 document.getElementById("btnDesfazer").addEventListener("click", async () => {
+  if (estado.ultimaVendaId === null) return;
   const status = document.getElementById("statusVenda");
   status.textContent = "Removendo...";
   status.className = "status-msg";
   try {
-    const resposta = await fetch(`${API}/vendas/ultima`, { method: "DELETE" });
+    const resposta = await fetch(`${API}/vendas/${estado.ultimaVendaId}`, { method: "DELETE" });
     const dados = await resposta.json();
-    if (!resposta.ok) throw new Error(dados.erro || "Erro ao desfazer.");
-    status.textContent = "Último lançamento removido.";
-    status.className = "status-msg ok";
+    // 404 = já não existe (alguém removeu antes): o estado local também deve limpar.
+    if (!resposta.ok && resposta.status !== 404) throw new Error(dados.erro || "Erro ao desfazer.");
+    status.textContent = resposta.ok ? "Seu último lançamento foi removido." : dados.erro;
+    status.className = resposta.ok ? "status-msg ok" : "status-msg err";
+    estado.ultimaVendaId = null;
+    atualizarBotaoDesfazer();
     await carregarTudo();
   } catch (erro) {
     status.textContent = erro.message;

@@ -56,6 +56,9 @@
     new Response(JSON.stringify(corpo), { status, headers: { "Content-Type": "application/json" } });
   const erro = (status, mensagem) => resposta(status, { erro: mensagem });
 
+  const INT_MAX = 2147483647;
+  const idValido = (x) => (typeof x === "number" && Number.isInteger(x) && x >= 1 && x <= INT_MAX ? x : null);
+  const idDeTexto = (x) => (typeof x === "string" && /^\d{1,10}$/.test(x) ? idValido(Number(x)) : null);
   const receita = (v) => v.quantidade * v.valor_unitario;
   const porQuantidadeDesc = (a, b) => b.quantidade - a.quantidade || String(a.nome ?? "").localeCompare(String(b.nome ?? ""));
 
@@ -90,7 +93,6 @@
       }));
     return resposta(200, {
       lojas: estado.lojas,
-      gerentes: estado.gerentes,
       vendedores: estado.vendedores,
       modelos: estado.modelos,
       ultimosLancamentos,
@@ -100,11 +102,11 @@
   // ---------- GET /api/analytics?lojaId=&mes=YYYY-MM ----------
   function analytics(estado, params) {
     const lojaParam = params.get("lojaId");
-    const lojaId = lojaParam ? Number(lojaParam) : null;
-    if (lojaParam && !Number.isInteger(lojaId)) return erro(400, "lojaId inválido.");
+    const lojaId = lojaParam ? idDeTexto(lojaParam) : null;
+    if (lojaParam && !lojaId) return erro(400, "lojaId inválido.");
 
     const mesParam = params.get("mes");
-    if (mesParam && !/^\d{4}-\d{2}$/.test(mesParam)) {
+    if (mesParam && !/^(19|20)\d{2}-(0[1-9]|1[0-2])$/.test(mesParam)) {
       return erro(400, "Parâmetro 'mes' deve estar no formato YYYY-MM.");
     }
 
@@ -195,64 +197,77 @@
 
   // ---------- POST /api/vendas ----------
   function registrarVenda(estado, corpo) {
-    if (!corpo.lojaId || !corpo.vendedorId || !corpo.modeloId) {
+    if (!corpo) return erro(400, "Envie o corpo da requisição em JSON (Content-Type: application/json).");
+    const lojaId = idValido(corpo.lojaId);
+    const vendedorId = idValido(corpo.vendedorId);
+    const modeloId = idValido(corpo.modeloId);
+    if (!lojaId || !vendedorId || !modeloId) {
       return erro(400, "Informe loja, vendedor e modelo.");
     }
-    const quantidade = Number(corpo.quantidade ?? 1);
-    if (!Number.isInteger(quantidade) || quantidade < 1) {
-      return erro(400, "Quantidade precisa ser um número inteiro maior que zero.");
+    const quantidade = corpo.quantidade ?? 1;
+    if (typeof quantidade !== "number" || !Number.isInteger(quantidade) || quantidade < 1 || quantidade > 50) {
+      return erro(400, "Quantidade precisa ser um número inteiro entre 1 e 50.");
     }
     const formaPagamento = corpo.formaPagamento ?? "A vista";
-    if (!FORMAS_PAGAMENTO.has(formaPagamento)) {
+    if (typeof formaPagamento !== "string" || !FORMAS_PAGAMENTO.has(formaPagamento)) {
       return erro(400, `Forma de pagamento inválida. Use uma de: ${[...FORMAS_PAGAMENTO].join(", ")}.`);
     }
-    const modelo = estado.modelos.find((m) => m.id === corpo.modeloId);
+    const clienteBruto = corpo.clienteNome ?? "";
+    if (typeof clienteBruto !== "string") return erro(400, "Nome do cliente inválido.");
+    const clienteNome = clienteBruto.trim() || null;
+    if (clienteNome && clienteNome.length > 120) return erro(400, "Nome do cliente pode ter no máximo 120 caracteres.");
+    const modelo = estado.modelos.find((m) => m.id === modeloId);
     if (!modelo) return erro(400, "Modelo não encontrado.");
-    const vendedor = estado.vendedores.find((v) => v.id === corpo.vendedorId);
+    const vendedor = estado.vendedores.find((v) => v.id === vendedorId);
     if (!vendedor) return erro(400, "Vendedor não encontrado.");
-    if (vendedor.loja_id !== corpo.lojaId) return erro(400, "Esse vendedor não pertence à loja informada.");
+    if (vendedor.loja_id !== lojaId) return erro(400, "Esse vendedor não pertence à loja informada.");
 
     const venda = {
       id: estado.proximoId++,
       criado_em: new Date(),
-      loja_id: corpo.lojaId,
+      loja_id: lojaId,
       vendedor_id: vendedor.id,
       gerente_id: vendedor.gerente_id,
       modelo_id: modelo.id,
       quantidade,
       valor_unitario: modelo.preco_tabela,
       forma_pagamento: formaPagamento,
-      cliente_nome: corpo.clienteNome?.trim() || null,
+      cliente_nome: clienteNome,
     };
     estado.vendas.push(venda);
     return resposta(201, { ok: true, id: venda.id, criadoEm: venda.criado_em.toISOString() });
   }
 
-  // ---------- DELETE /api/vendas/ultima ----------
-  function desfazerUltima(estado) {
-    if (estado.vendas.length === 0) return erro(404, "Não há nenhuma venda para remover.");
-    let indice = 0;
-    estado.vendas.forEach((v, i) => {
-      const atual = estado.vendas[indice];
-      if (v.criado_em > atual.criado_em || (+v.criado_em === +atual.criado_em && v.id > atual.id)) indice = i;
-    });
+  // ---------- DELETE /api/vendas/:id ----------
+  function desfazerVenda(estado, textoId) {
+    const id = idDeTexto(textoId);
+    if (!id) return erro(400, "Id de venda inválido.");
+    const indice = estado.vendas.findIndex((v) => v.id === id);
+    if (indice === -1) return erro(404, "Venda não encontrada (talvez já tenha sido removida).");
     const [removida] = estado.vendas.splice(indice, 1);
     return resposta(200, { ok: true, idRemovido: removida.id });
   }
 
   // ---------- POST /api/vendedores ----------
   function cadastrarVendedor(estado, corpo) {
-    const nome = corpo.nome?.trim();
-    if (!nome || !corpo.lojaId) return erro(400, "Informe nome do vendedor e a loja.");
-    if (!estado.lojas.some((l) => l.id === corpo.lojaId)) return erro(400, "Loja não encontrada.");
+    if (!corpo) return erro(400, "Envie o corpo da requisição em JSON (Content-Type: application/json).");
+    const nome = typeof corpo.nome === "string" ? corpo.nome.trim() : "";
+    const lojaId = idValido(corpo.lojaId);
+    if (!nome || !lojaId) return erro(400, "Informe nome do vendedor e a loja.");
+    if (nome.length > 80) return erro(400, "Nome do vendedor pode ter no máximo 80 caracteres.");
+    if (!estado.lojas.some((l) => l.id === lojaId)) return erro(400, "Loja não encontrada.");
 
     let gerenteId = null;
-    if (corpo.gerenteId) {
-      const gerente = estado.gerentes.find((g) => g.id === corpo.gerenteId && g.loja_id === corpo.lojaId);
+    if (corpo.gerenteId != null) {
+      const gerente = estado.gerentes.find((g) => g.id === idValido(corpo.gerenteId) && g.loja_id === lojaId);
       if (!gerente) return erro(400, "Esse gerente não pertence à loja informada.");
       gerenteId = gerente.id;
     }
-    const vendedor = { id: estado.proximoVendedorId++, nome, loja_id: corpo.lojaId, gerente_id: gerenteId };
+    // Mesma regra do índice único do banco: sem nome repetido na mesma loja (sem diferenciar caixa).
+    if (estado.vendedores.some((v) => v.loja_id === lojaId && v.nome.toLowerCase() === nome.toLowerCase())) {
+      return erro(409, "Já existe um vendedor com esse nome nessa loja.");
+    }
+    const vendedor = { id: estado.proximoVendedorId++, nome, loja_id: lojaId, gerente_id: gerenteId };
     estado.vendedores.push(vendedor);
     return resposta(201, { ok: true, id: vendedor.id });
   }
@@ -261,15 +276,21 @@
     const estado = await carregar();
     const metodo = (init?.method ?? "GET").toUpperCase();
     const rota = url.pathname.replace(/\/+$/, "");
-    const corpo = init?.body ? JSON.parse(init.body) : {};
+    let corpo = {};
+    try {
+      corpo = init?.body ? JSON.parse(init.body) : {};
+    } catch {
+      return erro(400, "Requisição inválida: envie um JSON válido.");
+    }
 
     if (metodo === "GET" && rota === "/api/bootstrap") return bootstrap(estado);
     if (metodo === "GET" && rota === "/api/analytics") return analytics(estado, url.searchParams);
-    if (metodo === "GET" && rota === "/api/health") return resposta(200, { ok: true });
+    if (metodo === "GET" && rota === "/api/health") return resposta(200, { ok: true, banco: "ok" });
     if (metodo === "POST" && rota === "/api/vendas") return registrarVenda(estado, corpo);
-    if (metodo === "DELETE" && rota === "/api/vendas/ultima") return desfazerUltima(estado);
+    const exclusao = rota.match(/^\/api\/vendas\/([^/]+)$/);
+    if (metodo === "DELETE" && exclusao) return desfazerVenda(estado, exclusao[1]);
     if (metodo === "POST" && rota === "/api/vendedores") return cadastrarVendedor(estado, corpo);
-    return erro(404, "Rota não existe na demo.");
+    return erro(404, "Rota não encontrada.");
   }
 
   window.fetch = function (entrada, init) {
