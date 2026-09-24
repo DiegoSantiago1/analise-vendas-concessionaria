@@ -37,19 +37,34 @@ CREATE TABLE lojas (
 CREATE TABLE gerentes (
     id       SERIAL PRIMARY KEY,
     nome     TEXT NOT NULL,
-    loja_id  INT NOT NULL REFERENCES lojas(id) ON DELETE CASCADE
+    loja_id  INT NOT NULL REFERENCES lojas(id) ON DELETE CASCADE,
+    -- (id, loja_id) é único de propósito: serve de alvo para as chaves
+    -- estrangeiras compostas abaixo, que amarram gerente e loja.
+    CONSTRAINT uq_gerentes_id_loja UNIQUE (id, loja_id)
 );
 
 -- ---------------------------------------------------------------------
 -- vendedores: pertence a uma loja; o gerente é opcional (nem toda loja
 -- tem um gerente cadastrado ainda, no dia a dia real isso acontece).
+--
+-- Integridade garantida pelo banco, não só pela API:
+--   - o gerente precisa ser da MESMA loja do vendedor (FK composta);
+--   - não existem dois vendedores com o mesmo nome na mesma loja
+--     (índice único sem diferenciar maiúscula/minúscula).
+-- ON DELETE SET NULL (gerente_id) zera só o gerente: sem a lista de
+-- colunas o Postgres tentaria zerar também loja_id, que é NOT NULL.
 -- ---------------------------------------------------------------------
 CREATE TABLE vendedores (
     id          SERIAL PRIMARY KEY,
     nome        TEXT NOT NULL,
     loja_id     INT NOT NULL REFERENCES lojas(id) ON DELETE CASCADE,
-    gerente_id  INT REFERENCES gerentes(id) ON DELETE SET NULL
+    gerente_id  INT,
+    CONSTRAINT uq_vendedores_id_loja UNIQUE (id, loja_id),
+    CONSTRAINT fk_vendedores_gerente_loja
+        FOREIGN KEY (gerente_id, loja_id) REFERENCES gerentes (id, loja_id)
+        ON DELETE SET NULL (gerente_id)
 );
+CREATE UNIQUE INDEX uq_vendedores_loja_nome ON vendedores (loja_id, lower(nome));
 
 -- ---------------------------------------------------------------------
 -- modelos: catálogo de veículos Honda vendidos, com preço de tabela
@@ -68,25 +83,36 @@ CREATE TABLE modelos (
 -- preço do modelo no momento da venda (histórico não muda se o preço
 -- do modelo for atualizado depois - é assim que funciona em sistemas
 -- de vendas reais).
+--
+-- As FKs compostas impedem, no próprio banco, uma venda cujo vendedor
+-- (ou gerente) pertença a outra loja. Com MATCH SIMPLE (o padrão), a FK
+-- do gerente é ignorada quando gerente_id é NULL, que é permitido.
 -- ---------------------------------------------------------------------
 CREATE TABLE vendas (
     id               SERIAL PRIMARY KEY,
     criado_em        TIMESTAMPTZ NOT NULL DEFAULT now(),
     loja_id          INT NOT NULL REFERENCES lojas(id),
-    vendedor_id      INT NOT NULL REFERENCES vendedores(id),
-    gerente_id       INT REFERENCES gerentes(id),
+    vendedor_id      INT NOT NULL,
+    gerente_id       INT,
     modelo_id        INT NOT NULL REFERENCES modelos(id),
     quantidade       INT NOT NULL CHECK (quantidade > 0),
     valor_unitario   NUMERIC(12,2) NOT NULL CHECK (valor_unitario > 0),
     forma_pagamento  TEXT NOT NULL CHECK (forma_pagamento IN ('A vista', 'Financiado', 'Consorcio')),
-    cliente_nome     TEXT
+    cliente_nome     TEXT,
+    CONSTRAINT fk_vendas_vendedor_loja FOREIGN KEY (vendedor_id, loja_id) REFERENCES vendedores (id, loja_id),
+    CONSTRAINT fk_vendas_gerente_loja  FOREIGN KEY (gerente_id, loja_id)  REFERENCES gerentes (id, loja_id)
 );
 
 -- Índices para as consultas mais comuns do painel: filtrar por período
 -- e agrupar por loja/vendedor são operações que rodam a cada poucos
 -- segundos no painel ao vivo, então merecem índice.
+-- (loja_id, criado_em) atende "vendas da loja X no mês Y" e, por ser
+-- prefixo, também qualquer filtro só por loja_id.
+-- As consultas filtram o mês com uma FAIXA (criado_em >= início AND
+-- criado_em < início do mês seguinte). Aplicar date_trunc() na coluna
+-- esconderia criado_em do índice e forçaria ler a tabela inteira.
 CREATE INDEX idx_vendas_criado_em ON vendas (criado_em);
-CREATE INDEX idx_vendas_loja_id   ON vendas (loja_id);
+CREATE INDEX idx_vendas_loja_criado_em ON vendas (loja_id, criado_em);
 CREATE INDEX idx_vendas_vendedor_id ON vendas (vendedor_id);
 
 -- ---------------------------------------------------------------------
@@ -138,6 +164,7 @@ SELECT
 FROM lojas l
 LEFT JOIN vendas v
     ON v.loja_id = l.id
-    AND date_trunc('month', v.criado_em) = date_trunc('month', now())
+    AND v.criado_em >= date_trunc('month', now())
+    AND v.criado_em <  date_trunc('month', now()) + interval '1 month'
 GROUP BY l.id, l.nome, l.equipe_apelido, l.meta_mensal
 ORDER BY acumulado DESC;

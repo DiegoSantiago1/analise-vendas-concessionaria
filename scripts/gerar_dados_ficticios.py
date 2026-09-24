@@ -10,14 +10,21 @@ números inventados, para que o projeto possa ficar público no portfólio
 sem expor dado nenhum de pessoa real.
 
 Uso:
-    python scripts/gerar_dados_ficticios.py
+    python scripts/gerar_dados_ficticios.py                   # histórico até hoje
+    python scripts/gerar_dados_ficticios.py --ate 2026-09-23  # histórico até uma data fixa
+
+Reprodutibilidade: a semente (random.seed(42)) fixa o sorteio, mas o histórico
+é montado para trás a partir de uma data-âncora. Sem --ate a âncora é o
+momento em que o script roda, então rodar em dias diferentes dá vendas em
+datas diferentes. Com --ate, a mesma data gera sempre exatamente os mesmos dados.
 """
 
 from __future__ import annotations
 
+import argparse
 import os
 import random
-from datetime import datetime, timedelta
+from datetime import date, datetime, time, timedelta
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -25,8 +32,6 @@ import sqlalchemy as sa
 
 # Carrega DB_USER, DB_PASSWORD etc. do .env na raiz do projeto
 load_dotenv(Path(__file__).resolve().parent.parent / ".env")
-
-random.seed(42)  # reprodutível: rodar de novo gera os mesmos dados
 
 # ---------------------------------------------------------------------
 # Dados de referência (fictícios)
@@ -89,12 +94,14 @@ CLIENTES_FICTICIOS = [
 DIAS_DE_HISTORICO = 60  # dois meses de vendas, pra dar volume real pra análise
 
 
-def gerar_vendas() -> list[dict]:
+def gerar_vendas(ancora: datetime) -> list[dict]:
     """Gera um histórico de vendas plausível: mais movimento em dias de
     semana e no fim do mês (comportamento real de concessionária), com
-    cada loja vendendo perto (não exatamente) da própria meta."""
+    cada loja vendendo perto (não exatamente) da própria meta.
+    O histórico termina em `ancora` e cobre os DIAS_DE_HISTORICO dias antes."""
+    random.seed(42)  # dentro da função: chamar duas vezes com a mesma âncora dá o mesmo resultado
     vendas = []
-    hoje = datetime.now()
+    hoje = ancora
     inicio = hoje - timedelta(days=DIAS_DE_HISTORICO)
 
     for loja_idx, loja in enumerate(LOJAS):
@@ -147,7 +154,18 @@ def montar_engine() -> sa.Engine:
     return sa.create_engine(url)
 
 
+def ler_ancora() -> datetime:
+    parser = argparse.ArgumentParser(description="Gera dados fictícios de vendas no PostgreSQL.")
+    parser.add_argument("--ate", type=date.fromisoformat, metavar="AAAA-MM-DD",
+                        help="data final do histórico (padrão: agora). Com data fixa, a geração é 100%% reproduzível.")
+    args = parser.parse_args()
+    if args.ate is None:
+        return datetime.now()
+    return datetime.combine(args.ate, time(23, 59))
+
+
 def main() -> None:
+    ancora = ler_ancora()
     engine = montar_engine()
 
     with engine.begin() as conn:
@@ -198,7 +216,7 @@ def main() -> None:
             )
             modelo_id_por_nome[modelo["nome"]] = res.scalar_one()
 
-        vendas = gerar_vendas()
+        vendas = gerar_vendas(ancora)
         conn.execute(
             sa.text(
                 "INSERT INTO vendas "

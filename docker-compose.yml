@@ -8,7 +8,9 @@ services:
       POSTGRES_PASSWORD: ${DB_PASSWORD:-honda_dev_pw}
       POSTGRES_DB: ${DB_NAME:-vendas_honda}
     ports:
-      - "${DB_PORT:-5432}:5432"
+      # 127.0.0.1: só esta máquina acessa o banco. Sem isso o Docker publica a
+      # porta em todas as interfaces e a rede local (Wi-Fi) alcançaria o Postgres.
+      - "127.0.0.1:${DB_PORT:-5432}:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./db/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
