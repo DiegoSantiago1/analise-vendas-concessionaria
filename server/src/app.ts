@@ -9,6 +9,17 @@ import { analyticsRouter } from "./routes/analytics.js";
 // A montagem do app fica separada do index.ts (que sobe o servidor) para os
 // testes conseguirem importar o app sem abrir a porta 3333.
 export const app = express();
+app.disable("x-powered-by"); // não anuncia o framework (e a versão) a quem faz a requisição
+
+// Cabeçalhos de segurança: o navegador não "adivinha" o tipo de um arquivo
+// (nosniff), a página não pode ser aberta dentro de outro site (clickjacking) e
+// o endereço não vaza para os sites dos links.
+app.use((_req, res, next) => {
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  res.setHeader("X-Frame-Options", "DENY");
+  res.setHeader("Referrer-Policy", "no-referrer");
+  next();
+});
 
 // Sem cors(): o front-end é servido por este mesmo servidor (mesma origem),
 // então nenhum outro site precisa chamar a API. Deixar CORS aberto permitiria

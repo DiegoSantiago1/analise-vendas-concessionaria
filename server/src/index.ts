@@ -2,6 +2,9 @@ import { app } from "./app.js";
 import { pool, verificarConexao } from "./db.js";
 
 const PORTA = Number(process.env.PORT ?? 3333);
+// Só esta máquina acessa: as rotas que lançam e apagam vendas não têm login, então
+// escutar em todas as interfaces deixaria qualquer um na mesma rede mexer nos dados.
+const HOST = process.env.HOST ?? "127.0.0.1";
 
 async function iniciar() {
   try {
@@ -12,8 +15,8 @@ async function iniciar() {
     process.exit(1);
   }
 
-  const servidor = app.listen(PORTA, () => {
-    console.log(`API rodando em http://localhost:${PORTA}`);
+  const servidor = app.listen(PORTA, HOST, () => {
+    console.log(`API rodando em http://${HOST}:${PORTA}`);
   });
 
   servidor.on("error", (err) => {

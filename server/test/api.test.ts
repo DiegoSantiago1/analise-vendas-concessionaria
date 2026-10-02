@@ -181,3 +181,15 @@ describe("integridade garantida pelo próprio banco", () => {
     await rejeita("INSERT INTO vendedores (nome, loja_id, gerente_id) VALUES ('Nome Novo Teste', $1, $2)", [lojaId, gerente.rows[0].id], "fk_vendedores_gerente_loja");
   });
 });
+
+describe("cabeçalhos de segurança", () => {
+  it("não anuncia o Express e envia nosniff, anti-clickjacking e referrer", async () => {
+    for (const rota of ["/api/health", "/"]) {
+      const r = await fetch(base + rota);
+      assert.equal(r.headers.get("x-powered-by"), null, rota);
+      assert.equal(r.headers.get("x-content-type-options"), "nosniff", rota);
+      assert.equal(r.headers.get("x-frame-options"), "DENY", rota);
+      assert.equal(r.headers.get("referrer-policy"), "no-referrer", rota);
+    }
+  });
+});

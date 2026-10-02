@@ -120,7 +120,7 @@ npm install
 npm run dev
 ```
 
-Acesse **http://localhost:3333**.
+Acesse **http://127.0.0.1:3333** (o servidor só aceita conexões desta máquina; para outra porta ou endereço, use as variáveis `PORT` e `HOST`).
 
 **Testes** (com o banco no ar e os dados carregados): `cd server && npm test`. São 36 testes de integração com o runner nativo do Node (validação das rotas, ciclo lançar/desfazer, parâmetros do analytics e as regras de integridade do banco). Não deixam resíduo nos dados.
 
