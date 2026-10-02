@@ -122,7 +122,7 @@ npm run dev
 
 Acesse **http://127.0.0.1:3333** (o servidor só aceita conexões desta máquina; para outra porta ou endereço, use as variáveis `PORT` e `HOST`).
 
-**Testes** (com o banco no ar e os dados carregados): `cd server && npm test`. São 36 testes de integração com o runner nativo do Node (validação das rotas, ciclo lançar/desfazer, parâmetros do analytics e as regras de integridade do banco). Não deixam resíduo nos dados.
+**Testes** (com o banco no ar e os dados carregados): `cd server && npm test`. São 37 testes de integração com o runner nativo do Node (validação das rotas, ciclo lançar/desfazer, parâmetros do analytics, regras de integridade do banco e cabeçalhos de segurança). Não deixam resíduo nos dados.
 
 **Já tinha o banco criado antes das regras de integridade?** O `schema.sql` só roda em volume vazio. Aplique a migração: `docker exec -i honda-vendas-db psql -U honda -d vendas_honda -v ON_ERROR_STOP=1 < db/migracoes/001_integridade_e_indices.sql` (roda numa transação: falha inteira ou nada).
 
