@@ -15,9 +15,9 @@ A demo roda no navegador, com os dados fictícios, sem instalar nada. O back-end
 
 ## Contexto
 
-Este projeto nasceu de um sistema real que uso no meu trabalho como Analista Administrativo de Vendas numa concessionária Honda: uma planilha com Google Apps Script que a equipe usava para acompanhar vendas do dia e meta do mês. Ele fazia o trabalho, mas tinha limitações que valia a pena resolver como projeto de estudo — e eu não podia simplesmente publicar o original, porque continha nomes reais de funcionários e metas comerciais confidenciais da empresa.
+Este projeto nasceu de um sistema real que uso no meu trabalho como Analista de Dados I numa concessionária Honda: uma planilha com Google Apps Script que a equipe usava para acompanhar vendas do dia e meta do mês. Ele fazia o trabalho, mas tinha limitações que valia a pena resolver como projeto de estudo — e eu não podia simplesmente publicar o original, porque continha nomes reais de funcionários e metas comerciais confidenciais da empresa.
 
-Por isso, reconstruí o problema do zero: mesma necessidade de negócio (acompanhar vendas, metas e desempenho por loja e por vendedor), arquitetura nova, tecnologias que estou estudando para migrar de TI administrativo para Dados, e **dado 100% fictício** — nenhuma informação real da empresa entra neste repositório (veja [Dados fictícios, de propósito](#dados-fictícios-de-propósito)).
+Por isso, reconstruí o problema do zero: mesma necessidade de negócio (acompanhar vendas, metas e desempenho por loja e por vendedor), arquitetura nova, tecnologias que uso na minha carreira em Dados, e **dado 100% fictício** — nenhuma informação real da empresa entra neste repositório (veja [Dados fictícios, de propósito](#dados-fictícios-de-propósito)).
 
 ## O problema que o painel resolve
 
