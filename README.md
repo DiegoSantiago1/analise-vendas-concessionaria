@@ -2,9 +2,16 @@
 
 Painel analítico de vendas para uma rede fictícia de concessionárias Honda: metas por loja, ranking de vendedores, mix de modelos, forma de pagamento e um calendário de vendas por dia — com lançamento de venda em tempo real.
 
-![Painel de vendas](docs/screenshots/painel.png)
+## 🔗 Acessar o projeto
 
-**[▶ Abrir a demo online](https://diegosantiago1.github.io/Portifolio/projetos/painel-vendas/)**: roda no navegador, com os dados fictícios. O back-end completo (PostgreSQL e API) roda localmente, veja [Como rodar localmente](#como-rodar-localmente) e [Demo online](#demo-online).
+[![Abrir o projeto](https://img.shields.io/badge/%E2%96%B6%20Abrir%20o%20projeto-EA580C?style=for-the-badge)](https://diegosantiago1.github.io/Portifolio/projetos/painel-vendas/)
+[![Ver no portfólio](https://img.shields.io/badge/Ver%20no%20portf%C3%B3lio-1F2937?style=for-the-badge&logo=googlechrome&logoColor=white)](https://diegosantiago1.github.io/Portifolio/#projetos)
+
+**Link direto:** https://diegosantiago1.github.io/Portifolio/projetos/painel-vendas/
+
+A demo roda no navegador, com os dados fictícios, sem instalar nada. O back-end completo (PostgreSQL e API) roda localmente: veja [Como rodar localmente](#como-rodar-localmente) e [Demo online](#demo-online).
+
+![Painel de vendas](docs/screenshots/painel.png)
 
 ## Contexto
 
