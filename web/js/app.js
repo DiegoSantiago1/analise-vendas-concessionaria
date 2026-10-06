@@ -50,6 +50,11 @@ function dataLocal(iso) {
   return new Date(ano, mes - 1, dia);
 }
 
+/** O banco guarda a forma de pagamento sem acento (valor estável, igual ao
+ *  CHECK do schema); a tela mostra o nome com acento. */
+const ROTULOS_PAGAMENTO = { "A vista": "À vista", Consorcio: "Consórcio" };
+const rotuloPagamento = (valor) => ROTULOS_PAGAMENTO[valor] ?? valor;
+
 function rotuloMes(mesIso) {
   const d = dataLocal(`${mesIso}-01`);
   return d.toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
@@ -207,7 +212,7 @@ function renderPainel() {
   const financiado = porFormaPagamento.find((f) => f.forma_pagamento === "Financiado")?.quantidade ?? 0;
   document.getElementById("donutPagamentoPct").textContent = totalPgto ? `${Math.round((financiado / totalPgto) * 100)}%` : "0%";
   document.getElementById("legendaPagamento").innerHTML = porFormaPagamento
-    .map((f, i) => `<span style="color:${SEQUENCIA[(i + 2) % SEQUENCIA.length]}">●</span> ${esc(f.forma_pagamento)} ${f.quantidade}`)
+    .map((f, i) => `<span style="color:${SEQUENCIA[(i + 2) % SEQUENCIA.length]}">●</span> ${esc(rotuloPagamento(f.forma_pagamento))} ${f.quantidade}`)
     .join(" &nbsp; ") || "sem vendas no mês";
   graficos.donutPagamento = criarDonut(
     "donutPagamento",
@@ -557,6 +562,12 @@ document.getElementById("formVenda").addEventListener("submit", async (evento) =
     });
     document.getElementById("txtCliente").value = "";
     document.getElementById("numQtd").value = 1;
+    // Vai para o mês da venda lançada, para ela aparecer nos gráficos mesmo
+    // se o painel estava mostrando um mês anterior.
+    const lancada = new Date(dados.criadoEm);
+    if (!Number.isNaN(lancada.getTime())) {
+      estado.mes = `${lancada.getFullYear()}-${String(lancada.getMonth() + 1).padStart(2, "0")}`;
+    }
     await carregarTudo();
   } catch (erro) {
     status.textContent = erro.message;

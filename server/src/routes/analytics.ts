@@ -67,20 +67,20 @@ analyticsRouter.get("/", async (req, res) => {
                 SUM(v.quantidade * v.valor_unitario) AS faturamento
          FROM vendas v JOIN modelos m ON m.id = v.modelo_id
          WHERE ${filtroMes} AND ${filtroLoja}
-         GROUP BY 1, 2 ORDER BY quantidade DESC`,
+         GROUP BY 1, 2 ORDER BY quantidade DESC, faturamento DESC, 1`,
         params
       ),
       pool.query(
         `SELECT m.categoria, SUM(v.quantidade)::int AS quantidade
          FROM vendas v JOIN modelos m ON m.id = v.modelo_id
          WHERE ${filtroMes} AND ${filtroLoja}
-         GROUP BY 1 ORDER BY quantidade DESC`,
+         GROUP BY 1 ORDER BY quantidade DESC, 1`,
         params
       ),
       pool.query(
         `SELECT v.forma_pagamento, SUM(v.quantidade)::int AS quantidade
          FROM vendas v WHERE ${filtroMes} AND ${filtroLoja}
-         GROUP BY 1 ORDER BY quantidade DESC`,
+         GROUP BY 1 ORDER BY quantidade DESC, 1`,
         params
       ),
       pool.query(
@@ -91,7 +91,7 @@ analyticsRouter.get("/", async (req, res) => {
          JOIN vendedores ve ON ve.id = v.vendedor_id
          JOIN lojas l ON l.id = v.loja_id
          WHERE ${filtroMes} AND ${filtroLoja}
-         GROUP BY 1, 2 ORDER BY quantidade DESC LIMIT 10`,
+         GROUP BY 1, 2 ORDER BY quantidade DESC, faturamento DESC, 1 LIMIT 10`,
         params
       ),
       pool.query(
@@ -100,7 +100,7 @@ analyticsRouter.get("/", async (req, res) => {
                 SUM(v.quantidade * v.valor_unitario) AS faturamento
          FROM vendas v JOIN lojas l ON l.id = v.loja_id
          WHERE ${filtroMes} AND ${filtroLoja}
-         GROUP BY 1, 2 ORDER BY quantidade DESC`,
+         GROUP BY 1, 2 ORDER BY quantidade DESC, faturamento DESC, 1`,
         params
       ),
       // Metas do mês escolhido. LEFT JOIN pra loja sem venda no mês
@@ -114,7 +114,7 @@ analyticsRouter.get("/", async (req, res) => {
           AND ${filtroMes}
          WHERE ($2::int IS NULL OR l.id = $2)
          GROUP BY l.id, l.nome, l.equipe_apelido, l.meta_mensal
-         ORDER BY acumulado DESC`,
+         ORDER BY acumulado DESC, l.nome`,
         params
       ),
       pool.query(

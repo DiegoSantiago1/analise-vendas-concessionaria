@@ -152,6 +152,36 @@ describe("GET /api/analytics: parâmetros", () => {
     assert.equal(dados.kpis.vendas, 0, "mês sem histórico devolve zero, não erro");
     assert.equal(dados.metas.length, 1);
   });
+
+  it("empate em quantidade: o ranking desempata pelo faturamento, não pelo nome", async () => {
+    // Dois vendedores da mesma loja, 1 carro cada, num mês sem histórico. O
+    // primeiro em ordem alfabética vende o carro mais barato: se o desempate
+    // fosse pelo nome, ele apareceria em 1º.
+    const doisDaLoja = await pool.query(
+      "SELECT id, nome FROM vendedores WHERE loja_id = $1 ORDER BY nome LIMIT 2",
+      [lojaId]
+    );
+    assert.equal(doisDaLoja.rows.length, 2, "a loja de teste precisa de 2 vendedores");
+    const [primeiroNome, segundoNome] = doisDaLoja.rows;
+    const ids: number[] = [];
+    try {
+      for (const [vendedor, valor] of [[primeiroNome, 130_000], [segundoNome, 170_000]] as const) {
+        const r = await pool.query(
+          `INSERT INTO vendas (loja_id, vendedor_id, modelo_id, quantidade, valor_unitario, forma_pagamento, criado_em)
+           VALUES ($1, $2, $3, 1, $4, 'A vista', '2001-01-15 12:00') RETURNING id`,
+          [lojaId, vendedor.id, modeloId, valor]
+        );
+        ids.push(r.rows[0].id);
+      }
+      const dados = await (await fetch(`${base}/api/analytics?mes=2001-01`)).json();
+      assert.deepEqual(
+        dados.rankingVendedores.map((v: { vendedor: string }) => v.vendedor),
+        [segundoNome.nome, primeiroNome.nome]
+      );
+    } finally {
+      await pool.query("DELETE FROM vendas WHERE id = ANY($1::int[])", [ids]);
+    }
+  });
 });
 
 describe("integridade garantida pelo próprio banco", () => {

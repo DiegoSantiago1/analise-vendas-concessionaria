@@ -60,7 +60,11 @@
   const idValido = (x) => (typeof x === "number" && Number.isInteger(x) && x >= 1 && x <= INT_MAX ? x : null);
   const idDeTexto = (x) => (typeof x === "string" && /^\d{1,10}$/.test(x) ? idValido(Number(x)) : null);
   const receita = (v) => v.quantidade * v.valor_unitario;
-  const porQuantidadeDesc = (a, b) => b.quantidade - a.quantidade || String(a.nome ?? "").localeCompare(String(b.nome ?? ""));
+  // Mesmo critério do SQL: quantidade, depois faturamento, depois nome.
+  const porQuantidadeDesc = (a, b) =>
+    b.quantidade - a.quantidade ||
+    (b.faturamento ?? 0) - (a.faturamento ?? 0) ||
+    String(a.nome ?? "").localeCompare(String(b.nome ?? ""));
 
   function agrupar(vendas, chave) {
     const mapa = new Map();
@@ -110,8 +114,11 @@
       return erro(400, "Parâmetro 'mes' deve estar no formato YYYY-MM.");
     }
 
+    // Sem mês pedido, a demo abre no último mês FECHADO: o mês corrente, no
+    // começo, tem poucas vendas e passa a impressão errada do painel. (A API
+    // real continua abrindo no mês corrente, que é o que a equipe usa no dia.)
     const agora = new Date();
-    const mes = mesParam ?? chaveMes(agora);
+    const mes = mesParam ?? chaveMes(new Date(agora.getFullYear(), agora.getMonth() - 1, 1));
     const [ano, numMes] = mes.split("-").map(Number);
     const ultimoDiaMes = new Date(ano, numMes, 0);
 

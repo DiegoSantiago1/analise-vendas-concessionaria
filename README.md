@@ -129,7 +129,7 @@ npm run dev
 
 Acesse **http://127.0.0.1:3333** (o servidor só aceita conexões desta máquina; para outra porta ou endereço, use as variáveis `PORT` e `HOST`).
 
-**Testes** (com o banco no ar e os dados carregados): `cd server && npm test`. São 37 testes de integração com o runner nativo do Node (validação das rotas, ciclo lançar/desfazer, parâmetros do analytics, regras de integridade do banco e cabeçalhos de segurança). Não deixam resíduo nos dados.
+**Testes** (com o banco no ar e os dados carregados): `cd server && npm test`. São 38 testes de integração com o runner nativo do Node (validação das rotas, ciclo lançar/desfazer, parâmetros do analytics, desempate do ranking pelo faturamento, regras de integridade do banco e cabeçalhos de segurança). Não deixam resíduo nos dados.
 
 **Já tinha o banco criado antes das regras de integridade?** O `schema.sql` só roda em volume vazio. Aplique a migração: `docker exec -i honda-vendas-db psql -U honda -d vendas_honda -v ON_ERROR_STOP=1 < db/migracoes/001_integridade_e_indices.sql` (roda numa transação: falha inteira ou nada).
 
@@ -144,6 +144,7 @@ node scripts/build_demo.mjs       # gera demo/dist: front-end + camada de API
 
 - `demo/demo-api.js` refaz em JavaScript as consultas que na versão real são SQL (`SUM`/`GROUP BY`). Comparei as respostas dela com as da API real (8 consultas por mês e por loja, o cadastro e os últimos lançamentos) e são idênticas.
 - O histórico é reancorado no dia em que a página abre, então "hoje" sempre tem movimento.
+- A demo abre no último mês fechado (no começo do mês corrente há poucas vendas, o que não mostra o painel de verdade). Ao lançar uma venda, ela vai para o mês corrente. A versão com servidor abre no mês corrente, que é o que a equipe acompanha no dia a dia.
 - Lançamentos feitos na demo ficam só na memória da página: recarregar volta ao estado inicial.
 
 ## Funcionalidades
