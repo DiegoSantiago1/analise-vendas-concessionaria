@@ -1,0 +1,72 @@
+# Integração contínua: tipos e testes de integração da API a cada push, contra um
+# PostgreSQL 16 de verdade com o mesmo schema e os mesmos dados fictícios do ambiente local.
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  testes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: honda
+          POSTGRES_PASSWORD: senha_so_do_ci
+          POSTGRES_DB: vendas_honda
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U honda -d vendas_honda"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      DB_HOST: 127.0.0.1
+      DB_PORT: "5432"
+      DB_USER: honda
+      DB_PASSWORD: senha_so_do_ci
+      DB_NAME: vendas_honda
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      # O mesmo schema.sql que o docker compose aplica na primeira subida.
+      - name: Criar o schema
+        env:
+          PGPASSWORD: senha_so_do_ci
+        run: psql -X -v ON_ERROR_STOP=1 -h 127.0.0.1 -U honda -d vendas_honda -f db/schema.sql
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.14"
+
+      # O gerador só precisa do SQLAlchemy, do driver e do dotenv (o requirements.txt
+      # inteiro traz pandas e Jupyter, que servem às análises, não aos testes).
+      - name: Gerar os dados fictícios
+        run: |
+          pip install "SQLAlchemy==2.0.54" "psycopg[binary]==3.3.6" "python-dotenv==1.2.3"
+          python scripts/gerar_dados_ficticios.py
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: server/package-lock.json
+
+      - name: Instalar dependências da API
+        working-directory: server
+        run: npm ci
+
+      - name: Tipos (tsc)
+        working-directory: server
+        run: npx tsc --noEmit
+
+      - name: Testes de integração (node:test)
+        working-directory: server
+        run: npm test
