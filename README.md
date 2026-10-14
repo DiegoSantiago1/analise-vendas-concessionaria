@@ -1,5 +1,7 @@
 # Sales Dashboard — Horizonte Honda Group (fictional data)
 
+[![ci](https://github.com/DiegoSantiago1/analise-vendas-concessionaria/actions/workflows/ci.yml/badge.svg)](https://github.com/DiegoSantiago1/analise-vendas-concessionaria/actions/workflows/ci.yml)
+
 An analytics dashboard for a fictional network of Honda car dealerships: monthly targets per store, salesperson ranking, model mix, payment method and a daily sales calendar, with sales recorded in real time.
 
 ## 🔗 Access the project

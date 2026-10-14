@@ -1,5 +1,7 @@
 # Painel de Vendas — Grupo Horizonte Honda (dados fictícios)
 
+[![ci](https://github.com/DiegoSantiago1/analise-vendas-concessionaria/actions/workflows/ci.yml/badge.svg)](https://github.com/DiegoSantiago1/analise-vendas-concessionaria/actions/workflows/ci.yml)
+
 Painel analítico de vendas para uma rede fictícia de concessionárias Honda: metas por loja, ranking de vendedores, mix de modelos, forma de pagamento e um calendário de vendas por dia — com lançamento de venda em tempo real.
 
 ## 🔗 Acessar o projeto
