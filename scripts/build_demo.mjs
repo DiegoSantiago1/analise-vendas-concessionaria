@@ -1,7 +1,7 @@
 // Monta a versão de demonstração do painel (estática, sem servidor).
 //
 // Reaproveita o front-end de web/ sem alterá-lo: copia css/ e js/app.js,
-// injeta demo/demo-api.js (que responde às chamadas /api/ no navegador) e um
+// injeta demo/demo-api.js (que responde às chamadas /api/ no navegador) e o
 // aviso de que é uma demo, e coloca os dados fictícios ao lado do script.
 //
 // Uso:
@@ -15,13 +15,12 @@ const destino = path.resolve(process.argv[2] ?? path.join(raiz, "demo", "dist"))
 
 const REPOSITORIO = "https://github.com/DiegoSantiago1/analise-vendas-concessionaria";
 
-const aviso = `
-<aside id="avisoDemo" style="position:fixed;right:16px;bottom:16px;z-index:60;max-width:330px;display:flex;gap:10px;align-items:flex-start;padding:11px 12px 11px 14px;border-radius:12px;background:rgba(10,4,5,.94);border:1px solid rgba(255,99,99,.35);color:#f7eeee;font:12.5px/1.45 'Outfit','Segoe UI',Arial,sans-serif;box-shadow:0 10px 30px rgba(0,0,0,.5)">
-  <span><b>Demo com dados fictícios.</b> O que você lançar aqui fica só no seu navegador.
-    <a href="${REPOSITORIO}" target="_blank" rel="noopener noreferrer" style="color:#ffd166">Ver código no GitHub ↗</a></span>
-  <button type="button" aria-label="Fechar aviso" onclick="this.parentElement.remove()" style="all:unset;cursor:pointer;color:#cc9a9c;font-size:18px;line-height:1;padding:0 2px">×</button>
-</aside>
-`;
+// O aviso entra no lugar do marcador <!--AVISO_DEMO--> do web/index.html, como
+// uma faixa no topo do conteúdo: não flutua por cima dos gráficos.
+const aviso = `<div class="aviso-demo" role="note">
+      <span><b>Demo com dados fictícios.</b> O que você lançar aqui fica só no seu navegador.</span>
+      <a href="${REPOSITORIO}" target="_blank" rel="noopener noreferrer">Ver código no GitHub</a>
+    </div>`;
 
 function exigir(condicao, mensagem) {
   if (!condicao) throw new Error(mensagem);
@@ -45,10 +44,10 @@ copiar(path.join(raiz, "demo", "demo-data.json"), path.join(destino, "js", "demo
 let html = fs.readFileSync(path.join(raiz, "web", "index.html"), "utf-8");
 const marcadorScript = '<script src="js/app.js"></script>';
 exigir(html.includes(marcadorScript), "web/index.html mudou: não achei o <script> do app.js");
-exigir(html.includes("</body>"), "web/index.html sem </body>");
+exigir(html.includes("<!--AVISO_DEMO-->"), "web/index.html sem o marcador <!--AVISO_DEMO-->");
 // demo-api.js precisa vir ANTES do app.js: é ele que troca o fetch.
 html = html.replace(marcadorScript, `<script src="js/demo-api.js"></script>\n${marcadorScript}`);
-html = html.replace("</body>", `${aviso}</body>`);
+html = html.replace("<!--AVISO_DEMO-->", aviso);
 fs.writeFileSync(path.join(destino, "index.html"), html, "utf-8");
 
 console.log(`Demo gerada em ${destino}`);

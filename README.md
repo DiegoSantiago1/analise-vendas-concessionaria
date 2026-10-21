@@ -98,7 +98,7 @@ Full schema: [`db/schema.sql`](db/schema.sql).
 
 **Validation and errors.** Every input is validated at the edge: a body that is not JSON, wrong types, ids outside the `INT` range and names that are too long get a 400 (never a 500), and a duplicate salesperson gets a 409. The database stays the last barrier, so integrity does not depend on the API being right. `/api/health` queries the database (503 if it is down), and the connection pool handles the `error` event, so the API survives a PostgreSQL restart and recovers on its own.
 
-**XSS.** Customer, salesperson, store and model names are escaped before going into HTML. I found the problem testing: an `<img onerror=...>` typed in the "Customer" field ran as code on the dashboard of anyone who opened it. The test that reproduces it runs against the real API and the demo.
+**XSS.** Customer, salesperson, store and model names are escaped before going into HTML. I found the problem testing: an `<img onerror=...>` typed in the "Customer" field ran as code on the dashboard of anyone who opened it. I checked the fix with an automated browser (Playwright), against the real API and the demo: the name shows as text and no `<img>` gets into the page.
 
 **"Undo" only removes what you recorded.** The first version removed "the last sale in the database", which with two users could be someone else's. Now the dashboard keeps the id of the sale recorded in its own session and the API deletes by id (`DELETE /api/vendas/:id`). There is no authentication (it is a portfolio prototype), so this prevents the accident, not someone calling the API on purpose.
 
@@ -155,10 +155,11 @@ node scripts/build_demo.mjs       # builds demo/dist: front end + API layer
 
 ## Features
 
+- **Pace to target:** the largest block on the screen shows the cars sold in the month, added up day by day, against the pace needed to hit the target. The line under the title says how many are missing and which store is furthest from its target. A tab switches the series to revenue.
 - **Network-wide and per-store dashboard:** clicking a store in the sidebar filters KPIs, charts, calendar and ranking to that store.
 - **Month navigation:** arrows at the top go through the history; you cannot go past the current month.
-- **Sales calendar:** colour intensity proportional to the day's volume, with today highlighted.
-- **Recording a sale:** a form that validates store, salesperson and model, with animated feedback showing who sold which car. "Undo" removes only the sale recorded in your session.
+- **Sales calendar:** shade proportional to the day's volume, with the month's best day and today highlighted.
+- **Recording a sale:** a form that validates store, salesperson and model, with a notice showing who sold which car. "Undo" removes only the sale recorded in your session.
 - **Quick salesperson registration** in an existing store.
 - Automatic refresh every 30 seconds.
 

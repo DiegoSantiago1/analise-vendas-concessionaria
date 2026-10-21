@@ -2,28 +2,35 @@
 // JS puro, consumindo a API REST em server/. Sem framework: o tamanho
 // desta tela não justifica React aqui, e a dependência não agregaria
 // nada que já não seja resolvido com fetch + Chart.js.
+//
+// A tela responde uma pergunta primeiro: a rede vai bater a meta do mês?
+// Por isso o maior bloco é o acumulado do mês contra o ritmo da meta, e a
+// frase embaixo do título diz quanto falta e qual loja está mais longe.
 
 const API = "/api";
 
-const PALETA = {
-  vermelho: "#ff2d43",
-  bordo: "#b0132a",
-  laranja: "#ff8a3d",
-  ambar: "#ffd166",
-  prata: "#c9ccd6",
-  lima: "#7dff8a", // reservado pra sinal de sucesso (meta batida) — não entra no ciclo decorativo
+// Cores: a moldura não tem cor. Tinta para os números, cinza para comparação,
+// e o vermelho Honda só no dado principal (a linha do mês).
+const COR = {
+  dado: "#cc0000",
+  tinta: "#0a0a0a",
+  cinza: "#8a8a8a",
+  grade: "#efedea",
+  rotulo: "#66625c",
 };
-const SEQUENCIA = [PALETA.vermelho, PALETA.ambar, PALETA.prata, PALETA.laranja, PALETA.bordo];
 
 const estado = {
   lojaSelecionada: null, // null = todas as lojas
   mes: null,             // 'YYYY-MM'; null = mês corrente (definido pela API)
   bootstrap: null,
   analytics: null,
+  serie: "carros",       // série do gráfico principal: "carros" ou "faturamento"
+  todosVendedores: false,
   ultimaVendaId: null,   // id da última venda lançada NESTA sessão (só ela pode ser desfeita)
+  contagemRede: null,    // vendas por loja da rede inteira no mês (para a lateral)
 };
 
-const graficos = { diario: null, lojas: null, donutMeta: null, donutCategoria: null, donutPagamento: null, aneis: [] };
+const graficos = { ritmo: null };
 
 // ==================== FORMATAÇÃO ====================
 const fmtInt = new Intl.NumberFormat("pt-BR");
@@ -56,9 +63,11 @@ const ROTULOS_PAGAMENTO = { "A vista": "À vista", Consorcio: "Consórcio" };
 const rotuloPagamento = (valor) => ROTULOS_PAGAMENTO[valor] ?? valor;
 
 function rotuloMes(mesIso) {
-  const d = dataLocal(`${mesIso}-01`);
-  return d.toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
+  const texto = dataLocal(`${mesIso}-01`).toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
+  return texto.charAt(0).toUpperCase() + texto.slice(1);
 }
+
+const pct = (parte, todo) => (todo > 0 ? Math.round((parte / todo) * 100) : 0);
 
 // ==================== CARREGAMENTO ====================
 async function carregarTudo() {
@@ -75,36 +84,44 @@ async function carregarTudo() {
     estado.analytics = analytics;
     estado.mes = analytics.periodo.mes;
 
-    renderSidebar();
-    renderTopbar();
+    renderLateral();
+    renderTitulo();
     renderPainel();
     renderFeed();
     popularFormularios();
   } catch (erro) {
     console.error("Falha ao carregar dados:", erro);
-    document.getElementById("rotuloMes").textContent = "erro ao carregar";
+    document.getElementById("achado").textContent =
+      "Não foi possível carregar os dados. Confira se a API está no ar e recarregue a página.";
   }
 }
 
-// ==================== SIDEBAR / TOPBAR ====================
-function renderSidebar() {
+// ==================== LATERAL / TÍTULO ====================
+function renderLateral() {
   const lista = document.getElementById("listaLojas");
-  const vendasPorLoja = new Map(
-    (estado.analytics.rankingLojas || []).map((l) => [l.loja, l.quantidade])
-  );
+  // As contagens da lateral são da rede inteira. Com uma loja filtrada, a
+  // consulta só traz aquela loja: usa as contagens guardadas da última vez em
+  // que a rede inteira deste mês foi carregada, ou não mostra número nenhum
+  // (mostrar 0 nas outras lojas seria mentira).
+  const { mes } = estado.analytics.periodo;
+  if (estado.lojaSelecionada === null) {
+    const ranking = estado.analytics.rankingLojas || [];
+    estado.contagemRede = {
+      mes,
+      porLoja: new Map(ranking.map((l) => [l.loja, l.quantidade])),
+      total: ranking.reduce((s, l) => s + l.quantidade, 0),
+    };
+  }
+  const contagem = estado.contagemRede?.mes === mes ? estado.contagemRede : null;
 
   const itens = [{ id: null, nome: "Todas as lojas" }, ...estado.bootstrap.lojas];
   lista.innerHTML = itens
-    .map((loja, i) => {
-      const ativo = estado.lojaSelecionada === loja.id ? "active" : "";
-      const cor = loja.id ? SEQUENCIA[(i - 1) % SEQUENCIA.length] : PALETA.vermelho;
-      const qtd = loja.id
-        ? vendasPorLoja.get(loja.nome) ?? 0
-        : (estado.analytics.rankingLojas || []).reduce((s, l) => s + l.quantidade, 0);
+    .map((loja) => {
+      const ativo = estado.lojaSelecionada === loja.id ? "ativo" : "";
+      const qtd = !contagem ? "" : loja.id ? contagem.porLoja.get(loja.nome) ?? 0 : contagem.total;
       return `
-        <button class="loja-item ${ativo}" data-loja="${loja.id ?? ""}">
-          <span class="ponto" style="background:${cor}"></span>
-          <span style="flex:1">${esc(loja.nome)}</span>
+        <button class="loja-item ${ativo}" data-loja="${loja.id ?? ""}" type="button" aria-pressed="${ativo ? "true" : "false"}">
+          <span>${esc(loja.nome)}</span>
           <span class="qtd">${qtd}</span>
         </button>`;
     })
@@ -114,18 +131,16 @@ function renderSidebar() {
     btn.addEventListener("click", () => {
       const valor = btn.dataset.loja;
       estado.lojaSelecionada = valor ? Number(valor) : null;
+      fecharMenu();
       carregarTudo();
     });
   });
 }
 
-function renderTopbar() {
+function renderTitulo() {
   const loja = estado.bootstrap.lojas.find((l) => l.id === estado.lojaSelecionada);
   document.getElementById("bcEscopo").textContent = loja ? loja.nome : "Todas as lojas";
   document.getElementById("rotuloMes").textContent = rotuloMes(estado.analytics.periodo.mes);
-  document.getElementById("dataHoje").textContent = dataLocal(estado.analytics.periodo.hoje).toLocaleDateString("pt-BR", {
-    day: "2-digit", month: "long", year: "numeric",
-  });
   // Não deixa navegar para meses no futuro: não existe venda lá.
   const hojeMes = estado.analytics.periodo.hoje.slice(0, 7);
   document.getElementById("mesProximo").disabled = estado.analytics.periodo.mes >= hojeMes;
@@ -141,241 +156,312 @@ function mudarMes(passo) {
 document.getElementById("mesAnterior").addEventListener("click", () => mudarMes(-1));
 document.getElementById("mesProximo").addEventListener("click", () => mudarMes(1));
 
-document.querySelectorAll(".nav-item").forEach((btn) => {
-  btn.addEventListener("click", () => {
-    document.querySelectorAll(".nav-item").forEach((b) => b.classList.remove("active"));
-    document.querySelectorAll(".view").forEach((v) => v.classList.remove("active"));
-    btn.classList.add("active");
-    document.getElementById(`view-${btn.dataset.view}`).classList.add("active");
-  });
-});
+// ==================== NAVEGAÇÃO ====================
+const TITULOS_VIEW = { painel: "Painel", lancamento: "Lançar venda" };
 
-// ==================== GRÁFICOS ====================
-function gradienteVertical(ctx, area, corTopo, corBase) {
-  const g = ctx.createLinearGradient(0, area.top, 0, area.bottom);
-  g.addColorStop(0, corTopo);
-  g.addColorStop(1, corBase);
-  return g;
+function irPara(view) {
+  document.querySelectorAll(".nav-item").forEach((b) => b.classList.toggle("ativo", b.dataset.view === view));
+  document.querySelectorAll(".view").forEach((v) => v.classList.toggle("ativa", v.id === `view-${view}`));
+  document.getElementById("tituloCelular").textContent = TITULOS_VIEW[view];
+  fecharMenu();
+  window.scrollTo({ top: 0 });
 }
 
-function criarDonut(canvasId, valores, cores, anterior) {
-  if (anterior) anterior.destroy();
-  return new Chart(document.getElementById(canvasId), {
-    type: "doughnut",
-    data: { datasets: [{ data: valores, backgroundColor: cores, borderWidth: 0, cutout: "76%", borderRadius: 6, spacing: 2 }] },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      animation: { duration: 650 },
-      plugins: { legend: { display: false }, tooltip: { enabled: false } },
-    },
-  });
+document.querySelectorAll(".nav-item").forEach((btn) => btn.addEventListener("click", () => irPara(btn.dataset.view)));
+document.querySelectorAll("[data-ir]").forEach((btn) => btn.addEventListener("click", () => irPara(btn.dataset.ir)));
+
+const botaoMenu = document.getElementById("botaoMenu");
+function fecharMenu() {
+  document.getElementById("lateral").classList.remove("aberta");
+  botaoMenu.setAttribute("aria-expanded", "false");
+  botaoMenu.textContent = "Menu";
+}
+botaoMenu.addEventListener("click", () => {
+  const aberta = document.getElementById("lateral").classList.toggle("aberta");
+  botaoMenu.setAttribute("aria-expanded", String(aberta));
+  botaoMenu.textContent = aberta ? "Fechar" : "Menu";
+});
+
+// ==================== PAINEL ====================
+function totaisDaMeta(metas) {
+  const meta = metas.reduce((s, m) => s + m.meta_mensal, 0);
+  const vendidos = metas.reduce((s, m) => s + m.acumulado, 0);
+  return { meta, vendidos, falta: Math.max(0, meta - vendidos) };
 }
 
 function renderPainel() {
   const { kpis, porDia, porModelo, porCategoria, porFormaPagamento, rankingLojas, rankingVendedores, metas } = estado.analytics;
+  const total = totaisDaMeta(metas);
 
-  // ---------- KPIs em texto ----------
+  document.getElementById("kpiCarros").textContent = fmtInt.format(total.vendidos);
+  document.getElementById("kpiMeta").textContent = `de ${fmtInt.format(total.meta)}`;
   document.getElementById("kpiFaturamento").textContent = moedaCurta(kpis.faturamento);
-  document.getElementById("kpiVendas").textContent = fmtInt.format(kpis.vendas);
-  document.getElementById("kpiTicket").textContent = moedaCurta(kpis.ticketMedio);
+  document.getElementById("kpiTicket").textContent = kpis.vendas ? moedaCurta(kpis.ticketMedio) : "—";
   document.getElementById("kpiDias").textContent = kpis.diasComVenda;
 
-  // ---------- Donut: meta ----------
-  const metaTotal = metas.reduce((s, m) => s + m.meta_mensal, 0);
-  const acumuladoTotal = metas.reduce((s, m) => s + m.acumulado, 0);
-  const pctMeta = metaTotal > 0 ? Math.round((acumuladoTotal / metaTotal) * 100) : 0;
-  document.getElementById("donutMetaPct").textContent = `${pctMeta}%`;
-  document.getElementById("legendaMeta").innerHTML = `<b>${acumuladoTotal}</b> de ${metaTotal} carros`;
-  graficos.donutMeta = criarDonut(
-    "donutMeta",
-    [Math.min(acumuladoTotal, metaTotal), Math.max(0, metaTotal - acumuladoTotal)],
-    [pctMeta >= 100 ? PALETA.lima : PALETA.vermelho, "rgba(255,255,255,0.06)"],
-    graficos.donutMeta
+  renderAchado(total, metas);
+  renderRitmo(porDia, total);
+  renderTabelaLojas(metas, rankingLojas);
+  renderTabelaVendedores(rankingVendedores);
+  renderBarras("barrasModelos", porModelo.slice(0, 7).map((m) => ({ nome: m.modelo, valor: m.quantidade })));
+  renderBarras(
+    "barrasPagamento",
+    porFormaPagamento.map((f) => ({ nome: rotuloPagamento(f.forma_pagamento), valor: f.quantidade })),
+    true
   );
-
-  // ---------- Donut: categoria ----------
-  const totalCategoria = porCategoria.reduce((s, c) => s + c.quantidade, 0);
-  document.getElementById("donutCategoriaTotal").textContent = fmtInt.format(totalCategoria);
-  document.getElementById("legendaCategoria").innerHTML = porCategoria
-    .map((c, i) => `<span style="color:${SEQUENCIA[i % SEQUENCIA.length]}">●</span> ${esc(c.categoria)} ${c.quantidade}`)
-    .join(" &nbsp; ") || "sem vendas no mês";
-  graficos.donutCategoria = criarDonut(
-    "donutCategoria",
-    porCategoria.map((c) => c.quantidade),
-    porCategoria.map((_, i) => SEQUENCIA[i % SEQUENCIA.length]),
-    graficos.donutCategoria
-  );
-
-  // ---------- Donut: forma de pagamento ----------
-  const totalPgto = porFormaPagamento.reduce((s, f) => s + f.quantidade, 0);
-  const financiado = porFormaPagamento.find((f) => f.forma_pagamento === "Financiado")?.quantidade ?? 0;
-  document.getElementById("donutPagamentoPct").textContent = totalPgto ? `${Math.round((financiado / totalPgto) * 100)}%` : "0%";
-  document.getElementById("legendaPagamento").innerHTML = porFormaPagamento
-    .map((f, i) => `<span style="color:${SEQUENCIA[(i + 2) % SEQUENCIA.length]}">●</span> ${esc(rotuloPagamento(f.forma_pagamento))} ${f.quantidade}`)
-    .join(" &nbsp; ") || "sem vendas no mês";
-  graficos.donutPagamento = criarDonut(
-    "donutPagamento",
-    porFormaPagamento.map((f) => f.quantidade),
-    porFormaPagamento.map((_, i) => SEQUENCIA[(i + 2) % SEQUENCIA.length]),
-    graficos.donutPagamento
-  );
-
-  // ---------- Barras: modelos ----------
-  const topModelos = porModelo.slice(0, 5);
-  const maiorModelo = topModelos[0]?.quantidade || 1;
-  document.getElementById("barrasModelos").innerHTML = topModelos.length
-    ? topModelos
-        .map((m, i) => {
-          const cor = SEQUENCIA[i % SEQUENCIA.length];
-          const largura = Math.round((m.quantidade / maiorModelo) * 100);
-          return `
-            <div class="barra-item">
-              <div class="barra-topo"><span>${esc(m.modelo)}</span><b>${m.quantidade}</b></div>
-              <div class="barra-trilho">
-                <div class="barra-preenchida" style="width:${largura}%;background:linear-gradient(90deg, ${cor}, ${cor}55)"></div>
-              </div>
-            </div>`;
-        })
-        .join("")
-    : '<p class="vazio-msg">Sem vendas no mês.</p>';
-
-  renderGraficoDiario(porDia);
-  renderGraficoLojas(rankingLojas);
+  renderBarras("barrasCategoria", porCategoria.map((c) => ({ nome: c.categoria, valor: c.quantidade })), true);
   renderCalendario(porDia);
-  renderVendedores(rankingVendedores);
-  renderAneisMetas(metas);
 }
 
-function renderGraficoDiario(porDia) {
-  const nota = document.getElementById("notaVendasDia");
-  if (graficos.diario) graficos.diario.destroy();
+/** A frase sob o título: o achado do mês, perto do botão que age sobre ele. */
+function renderAchado(total, metas) {
+  const el = document.getElementById("achado");
+  const { ultimo_dia, hoje } = estado.analytics.periodo;
+  const fechado = hoje > ultimo_dia;
+  const p = pct(total.vendidos, total.meta);
 
-  if (!porDia.length) {
-    nota.textContent = "sem vendas no mês";
-    graficos.diario = null;
+  if (!total.meta) {
+    el.textContent = "Sem meta cadastrada para este mês.";
     return;
   }
-  const melhor = porDia.reduce((a, b) => (b.quantidade > a.quantidade ? b : a));
-  nota.textContent = `melhor dia: ${dataLocal(melhor.dia).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" })} (${melhor.quantidade})`;
+  let frase;
+  if (total.vendidos >= total.meta) {
+    frase = `Meta batida: ${total.vendidos} de ${total.meta} carros (${p}%).`;
+  } else if (fechado) {
+    frase = `Fechou com ${total.vendidos} de ${total.meta} carros (${p}%): <span class="falta">faltaram ${total.falta}</span>.`;
+  } else {
+    const dia = dataLocal(hoje).getDate();
+    const diasNoMes = dataLocal(ultimo_dia).getDate();
+    const noRitmo = Math.round((total.meta * dia) / diasNoMes);
+    frase = `${total.vendidos} de ${total.meta} carros até o dia ${dia} de ${diasNoMes}; no ritmo da meta seriam ${noRitmo}. <span class="falta">Faltam ${total.falta}</span>.`;
+  }
+  // Com todas as lojas na tela, diz qual está mais longe da própria meta.
+  if (metas.length > 1) {
+    const pior = metas
+      .filter((m) => m.meta_mensal > 0)
+      .reduce((a, b) => (b.acumulado / b.meta_mensal < a.acumulado / a.meta_mensal ? b : a));
+    const pPior = pct(pior.acumulado, pior.meta_mensal);
+    if (pPior < 100) frase += ` ${esc(pior.loja)} está mais longe da meta, com ${pPior}%.`;
+  }
+  el.innerHTML = frase;
+}
 
-  graficos.diario = new Chart(document.getElementById("chartDiario"), {
-    type: "line",
-    data: {
-      labels: porDia.map((d) => dataLocal(d.dia).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })),
-      datasets: [
-        {
-          label: "Carros vendidos",
-          data: porDia.map((d) => d.quantidade),
-          borderColor: PALETA.ambar,
-          borderWidth: 2.5,
-          tension: 0.38,
-          pointRadius: 0,
-          pointHoverRadius: 5,
-          pointHoverBackgroundColor: PALETA.ambar,
-          fill: true,
-          backgroundColor: (ctx) => {
-            const { ctx: c, chartArea } = ctx.chart;
-            if (!chartArea) return "transparent";
-            return gradienteVertical(c, chartArea, "rgba(255,209,102,0.35)", "rgba(255,209,102,0)");
-          },
-        },
-      ],
+// ---------- gráfico principal: acumulado do mês contra o ritmo da meta ----------
+function serieAcumulada(porDia, campo, ultimoDiaComDado) {
+  const porData = new Map(porDia.map((d) => [Number(d.dia.slice(8, 10)), Number(d[campo]) || 0]));
+  const valores = [];
+  let soma = 0;
+  for (let dia = 1; dia <= ultimoDiaComDado; dia++) {
+    soma += porData.get(dia) ?? 0;
+    valores.push(soma);
+  }
+  return valores;
+}
+
+function renderRitmo(porDia, total) {
+  const { ultimo_dia, hoje } = estado.analytics.periodo;
+  const diasNoMes = dataLocal(ultimo_dia).getDate();
+  // Mês corrente: a linha para no dia de hoje; mês fechado: vai até o fim.
+  const ateDia = hoje > ultimo_dia ? diasNoMes : Math.min(diasNoMes, dataLocal(hoje).getDate());
+  const labels = Array.from({ length: diasNoMes }, (_, i) => i + 1);
+  const ehCarros = estado.serie === "carros";
+
+  const acumulado = serieAcumulada(porDia, ehCarros ? "quantidade" : "faturamento", ateDia);
+  const datasets = [
+    {
+      label: ehCarros ? "Carros vendidos (acumulado)" : "Faturamento (acumulado)",
+      data: acumulado,
+      borderColor: COR.dado,
+      borderWidth: 2.5,
+      tension: 0,
+      pointRadius: 0,
+      pointHoverRadius: 4,
+      pointHoverBackgroundColor: COR.dado,
+      fill: false,
     },
+  ];
+  if (ehCarros && total.meta) {
+    datasets.push({
+      label: "Ritmo da meta",
+      data: labels.map((d) => Math.round((total.meta * d * 10) / diasNoMes) / 10),
+      borderColor: COR.cinza,
+      borderWidth: 1.5,
+      borderDash: [5, 4],
+      tension: 0,
+      pointRadius: 0,
+      pointHoverRadius: 0,
+      fill: false,
+    });
+  }
+
+  document.getElementById("legendaRitmo").innerHTML = ehCarros
+    ? '<span><i></i>Carros vendidos no mês</span><span><i class="meta"></i>Ritmo para bater a meta</span>'
+    : "<span><i></i>Faturamento acumulado no mês</span>";
+  const ultimo = acumulado.at(-1) ?? 0;
+  document.getElementById("notaRitmo").textContent = porDia.length
+    ? ehCarros
+      ? `${fmtInt.format(ultimo)} carros até o dia ${ateDia}`
+      : `${moedaCurta(ultimo)} até o dia ${ateDia}`
+    : "Sem vendas neste mês";
+
+  if (graficos.ritmo) graficos.ritmo.destroy();
+  graficos.ritmo = new Chart(document.getElementById("chartRitmo"), {
+    type: "line",
+    data: { labels, datasets },
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      animation: { duration: 700 },
+      animation: { duration: 400 },
       interaction: { intersect: false, mode: "index" },
       plugins: {
         legend: { display: false },
         tooltip: {
-          backgroundColor: "rgba(10,4,5,0.95)",
-          borderColor: "rgba(255,70,70,0.35)",
-          borderWidth: 1,
-          padding: 11,
+          backgroundColor: "#141414",
+          padding: 10,
+          displayColors: false,
+          titleFont: { family: "Geist", weight: "500" },
+          bodyFont: { family: "Geist" },
           callbacks: {
+            title: (itens) => `Dia ${itens[0].label}`,
             label: (item) => {
-              const linha = porDia[item.dataIndex];
-              return `  ${linha.quantidade} carro(s) · ${moedaCurta(linha.faturamento)}`;
+              const v = item.raw;
+              if (item.datasetIndex === 1) return `Ritmo da meta: ${fmtInt.format(Math.round(v))}`;
+              return ehCarros ? `Vendidos até aqui: ${fmtInt.format(v)}` : `Faturado até aqui: ${moedaCurta(v)}`;
             },
           },
         },
       },
       scales: {
-        x: { ticks: { color: "#b08386", maxRotation: 0, autoSkipPadding: 18, font: { size: 11 } }, grid: { display: false } },
-        y: { beginAtZero: true, ticks: { color: "#b08386", precision: 0, font: { size: 11 } }, grid: { color: "rgba(255,255,255,0.05)" } },
+        x: {
+          grid: { display: false },
+          border: { color: COR.grade },
+          ticks: { color: COR.rotulo, maxRotation: 0, autoSkip: true, maxTicksLimit: 8, font: { family: "Geist", size: 12 } },
+        },
+        y: {
+          beginAtZero: true,
+          grid: { color: COR.grade },
+          border: { display: false },
+          ticks: {
+            color: COR.rotulo,
+            maxTicksLimit: 5,
+            precision: 0,
+            font: { family: "Geist", size: 12 },
+            callback: (v) => (ehCarros ? fmtInt.format(v) : moedaCurta(v)),
+          },
+        },
       },
     },
   });
 }
 
-function renderGraficoLojas(ranking) {
-  if (graficos.lojas) graficos.lojas.destroy();
-  const canvas = document.getElementById("chartLojas");
-  if (!ranking.length) {
-    canvas.style.display = "none";
-    graficos.lojas = null;
+document.querySelectorAll("button.kpi").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    estado.serie = btn.dataset.serie;
+    document.querySelectorAll("button.kpi").forEach((b) => {
+      const ativo = b === btn;
+      b.classList.toggle("ativo", ativo);
+      b.setAttribute("aria-selected", String(ativo));
+    });
+    if (estado.analytics) renderRitmo(estado.analytics.porDia, totaisDaMeta(estado.analytics.metas));
+  });
+});
+
+// ---------- tabelas ----------
+function renderTabelaLojas(metas, rankingLojas) {
+  const corpo = document.getElementById("tabelaLojas");
+  if (!metas.length) {
+    corpo.innerHTML = '<tr><td colspan="4" class="vazio">Sem meta cadastrada para este mês.</td></tr>';
     return;
   }
-  canvas.style.display = "";
-  graficos.lojas = new Chart(canvas, {
-    type: "bar",
-    data: {
-      labels: ranking.map((l) => l.loja),
-      datasets: [
-        {
-          data: ranking.map((l) => l.quantidade),
-          backgroundColor: (ctx) => {
-            const { ctx: c, chartArea } = ctx.chart;
-            if (!chartArea) return PALETA.vermelho;
-            const cor = SEQUENCIA[ctx.dataIndex % SEQUENCIA.length];
-            const g = c.createLinearGradient(chartArea.left, 0, chartArea.right, 0);
-            g.addColorStop(0, `${cor}33`);
-            g.addColorStop(1, cor);
-            return g;
-          },
-          borderRadius: 7,
-          barThickness: 20,
-        },
-      ],
-    },
-    options: {
-      indexAxis: "y",
-      responsive: true,
-      maintainAspectRatio: false,
-      animation: { duration: 650 },
-      plugins: {
-        legend: { display: false },
-        tooltip: {
-          backgroundColor: "rgba(10,4,5,0.95)",
-          padding: 10,
-          callbacks: { label: (item) => `  ${item.raw} carro(s) · ${moedaCurta(ranking[item.dataIndex].faturamento)}` },
-        },
-      },
-      scales: {
-        x: { beginAtZero: true, ticks: { color: "#b08386", precision: 0, font: { size: 11 } }, grid: { color: "rgba(255,255,255,0.05)" } },
-        y: { ticks: { color: "#f4eeff", font: { size: 12, weight: "600" } }, grid: { display: false } },
-      },
-    },
-  });
+  const faturamento = new Map((rankingLojas || []).map((l) => [l.loja, l.faturamento]));
+  const ordenadas = [...metas].sort((a, b) => b.acumulado / (b.meta_mensal || 1) - a.acumulado / (a.meta_mensal || 1));
+  corpo.innerHTML = ordenadas
+    .map((m) => {
+      const p = pct(m.acumulado, m.meta_mensal);
+      const largura = Math.min(100, p);
+      const marca = p >= 100 ? '<span class="pilula">meta batida</span>' : `<span class="meta-pct abaixo">${p}%</span>`;
+      return `
+        <tr>
+          <td>${esc(m.loja)}</td>
+          <td class="num">${m.acumulado} <span class="traco">/ ${m.meta_mensal}</span></td>
+          <td class="meta-celula">
+            <div class="meta-barra">
+              <div class="meta-trilho" role="img" aria-label="${p}% da meta"><div class="meta-preenchido" style="width:${largura}%"></div></div>
+              ${marca}
+            </div>
+          </td>
+          <td class="num">${faturamento.has(m.loja) ? moedaCurta(faturamento.get(m.loja)) : '<span class="traco">—</span>'}</td>
+        </tr>`;
+    })
+    .join("");
 }
 
-// ==================== CALENDÁRIO ====================
+function renderTabelaVendedores(ranking) {
+  const corpo = document.getElementById("tabelaVendedores");
+  const botao = document.getElementById("verTodosVendedores");
+  if (!ranking.length) {
+    corpo.innerHTML = '<tr><td colspan="4" class="vazio">Nenhuma venda neste mês.</td></tr>';
+    botao.hidden = true;
+    return;
+  }
+  const limite = estado.todosVendedores ? ranking.length : 5;
+  botao.hidden = ranking.length <= 5;
+  botao.textContent = estado.todosVendedores ? "Ver só os 5 primeiros" : `Ver todos (${ranking.length})`;
+  corpo.innerHTML = ranking
+    .slice(0, limite)
+    .map(
+      (v, i) => `
+      <tr>
+        <td class="num pos">${i + 1}</td>
+        <td><span class="nome">${esc(v.vendedor)}</span><span class="sub">${esc(v.loja)}</span></td>
+        <td class="num">${v.quantidade}</td>
+        <td class="num">${moedaCurta(v.faturamento)}</td>
+      </tr>`
+    )
+    .join("");
+}
+
+document.getElementById("verTodosVendedores").addEventListener("click", () => {
+  estado.todosVendedores = !estado.todosVendedores;
+  if (estado.analytics) renderTabelaVendedores(estado.analytics.rankingVendedores);
+});
+
+// ---------- barras em tinta ----------
+function renderBarras(id, itens, comPercentual = false) {
+  const el = document.getElementById(id);
+  if (!itens.length) {
+    el.innerHTML = '<p class="vazio">Nenhuma venda neste mês.</p>';
+    return;
+  }
+  const maior = Math.max(...itens.map((i) => i.valor), 1);
+  const soma = itens.reduce((s, i) => s + i.valor, 0);
+  el.innerHTML = itens
+    .map((item) => {
+      const largura = Math.round((item.valor / maior) * 100);
+      const parte = comPercentual ? `<small>${pct(item.valor, soma)}%</small>` : "";
+      return `
+        <div class="barra">
+          <div class="barra-topo"><span class="barra-nome">${esc(item.nome)}</span><span class="barra-valor">${item.valor}${parte}</span></div>
+          <div class="barra-trilho"><div class="barra-preenchida" style="width:${largura}%"></div></div>
+        </div>`;
+    })
+    .join("");
+}
+
+// ---------- calendário ----------
 function renderCalendario(porDia) {
   const { primeiro_dia, ultimo_dia, hoje } = estado.analytics.periodo;
   const porDiaMapa = new Map(porDia.map((d) => [d.dia, d.quantidade]));
-  const maior = Math.max(1, ...porDia.map((d) => d.quantidade));
+  const maior = Math.max(0, ...porDia.map((d) => d.quantidade));
+  const melhor = porDia.length ? porDia.reduce((a, b) => (b.quantidade > a.quantidade ? b : a)) : null;
 
   const inicio = dataLocal(primeiro_dia);
-  const fim = dataLocal(ultimo_dia);
-  const diasNoMes = fim.getDate();
+  const diasNoMes = dataLocal(ultimo_dia).getDate();
   const primeiroDiaSemana = inicio.getDay(); // 0 = domingo
 
-  const cabecalhos = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"]
-    .map((d) => `<div class="cal-cabecalho">${d}</div>`)
+  const cabecalhos = ["D", "S", "T", "Q", "Q", "S", "S"]
+    .map((d, i) => `<div class="cal-cabecalho" title="${["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"][i]}">${d}</div>`)
     .join("");
-
   const vazios = Array.from({ length: primeiroDiaSemana }, () => '<div class="cal-dia vazio"></div>').join("");
 
   const dias = Array.from({ length: diasNoMes }, (_, i) => {
@@ -383,122 +469,50 @@ function renderCalendario(porDia) {
     const iso = `${primeiro_dia.slice(0, 7)}-${String(numero).padStart(2, "0")}`;
     const qtd = porDiaMapa.get(iso) ?? 0;
     // 5 faixas de intensidade, proporcionais ao melhor dia do mês.
-    const nivel = qtd === 0 ? 0 : Math.min(4, Math.ceil((qtd / maior) * 4));
-    const ehHoje = iso === hoje ? "hoje" : "";
-    return `
-      <div class="cal-dia n${nivel} ${ehHoje}" title="${dataLocal(iso).toLocaleDateString("pt-BR")}: ${qtd} carro(s) vendido(s)">
-        <span class="cal-data">${numero}</span>
-        <span class="cal-total">${qtd}</span>
-        <span class="cal-rotulo">${qtd === 1 ? "venda" : "vendas"}</span>
-      </div>`;
+    const nivel = qtd === 0 || maior === 0 ? 0 : Math.min(4, Math.ceil((qtd / maior) * 4));
+    const classes = ["cal-dia", `n${nivel}`, iso === hoje ? "hoje" : "", melhor && iso === melhor.dia ? "melhor" : ""].join(" ");
+    const titulo = `${dataLocal(iso).toLocaleDateString("pt-BR")}: ${qtd} carro(s)`;
+    return `<div class="${classes}" title="${titulo}"><span class="cal-data">${numero}</span><span class="cal-total">${qtd}</span></div>`;
   }).join("");
 
   document.getElementById("calendario").innerHTML = cabecalhos + vazios + dias;
+  document.getElementById("escalaMaximo").textContent = maior;
+  document.getElementById("notaCalendario").textContent = melhor
+    ? `melhor dia: ${dataLocal(melhor.dia).toLocaleDateString("pt-BR", { day: "numeric", month: "short" })}, ${melhor.quantidade} carros`
+    : "sem vendas";
 }
 
-// ==================== LISTAS ====================
-function renderVendedores(ranking) {
-  const el = document.getElementById("listaVendedores");
-  if (!ranking.length) {
-    el.innerHTML = '<p class="vazio-msg">Sem vendas no mês.</p>';
-    return;
-  }
-  el.innerHTML = ranking
-    .map(
-      (v, i) => `
-      <div class="ranking-item">
-        <div class="ranking-pos">${i + 1}</div>
-        <div class="ranking-info"><b>${esc(v.vendedor)}</b><small>${esc(v.loja)} · ${moedaCurta(v.faturamento)}</small></div>
-        <div class="ranking-valor">${v.quantidade}</div>
-      </div>`
-    )
-    .join("");
-}
-
-function renderAneisMetas(metas) {
-  graficos.aneis.forEach((g) => g.destroy());
-  graficos.aneis = [];
-
-  const grid = document.getElementById("aneisMetas");
-  grid.innerHTML = metas
-    .map((m, i) => {
-      const pct = m.meta_mensal > 0 ? Math.round((m.acumulado / m.meta_mensal) * 100) : 0;
-      return `
-        <div class="anel">
-          <div class="anel-wrap">
-            <canvas id="anel-${m.loja_id}"></canvas>
-            <div class="anel-centro"><b style="color:${pct >= 100 ? PALETA.lima : SEQUENCIA[i % SEQUENCIA.length]}">${pct}%</b></div>
-          </div>
-          <div class="anel-nome">${esc(m.loja)}</div>
-          <div class="anel-sub">${m.acumulado} / ${m.meta_mensal} carros</div>
-        </div>`;
-    })
-    .join("");
-
-  metas.forEach((m, i) => {
-    const pct = m.meta_mensal > 0 ? Math.min(100, (m.acumulado / m.meta_mensal) * 100) : 0;
-    const cor = pct >= 100 ? PALETA.lima : SEQUENCIA[i % SEQUENCIA.length];
-    graficos.aneis.push(
-      new Chart(document.getElementById(`anel-${m.loja_id}`), {
-        type: "doughnut",
-        data: { datasets: [{ data: [pct, 100 - pct], backgroundColor: [cor, "rgba(255,255,255,0.06)"], borderWidth: 0, cutout: "74%", borderRadius: 6 }] },
-        options: { responsive: true, maintainAspectRatio: false, animation: { duration: 650 }, plugins: { legend: { display: false }, tooltip: { enabled: false } } },
-      })
-    );
-  });
-}
-
+// ==================== ÚLTIMOS LANÇAMENTOS ====================
 function renderFeed() {
   const el = document.getElementById("feedUltimos");
   const lancamentos = estado.bootstrap.ultimosLancamentos;
   if (!lancamentos.length) {
-    el.innerHTML = '<p class="vazio-msg">Nenhuma venda lançada ainda.</p>';
+    el.innerHTML = '<p class="vazio">Nenhuma venda lançada ainda.</p>';
     return;
   }
   el.innerHTML = lancamentos
     .map((v) => {
       const dt = new Date(v.criado_em);
       const quando = `${dt.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })} ${dt.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}`;
-      const cliente = v.cliente_nome ? ` para <b>${esc(v.cliente_nome)}</b>` : "";
+      const cliente = v.cliente_nome ? ` para ${esc(v.cliente_nome)}` : "";
       return `<div class="feed-item">
           <span class="feed-hora">${quando}</span>
-          <span class="tag-loja">${esc(v.loja_nome)}</span>
-          <span><b>${esc(v.vendedor_nome)}</b> vendeu ${v.quantidade}x ${esc(v.modelo_nome)}${cliente}</span>
+          <span>${esc(v.vendedor_nome)} vendeu ${v.quantidade}x ${esc(v.modelo_nome)}${cliente}</span>
+          <span class="feed-loja">${esc(v.loja_nome)}</span>
         </div>`;
     })
     .join("");
 }
 
-// ==================== CELEBRAÇÃO DE VENDA ====================
-const CORES_CONFETE = [PALETA.vermelho, PALETA.laranja, PALETA.ambar, PALETA.prata, PALETA.bordo];
-let timerCelebracao = null;
+// ==================== AVISO DE VENDA LANÇADA ====================
+let timerAviso = null;
 
-function celebrarVenda({ vendedor, modelo, loja, quantidade }) {
-  const el = document.getElementById("celebracaoVenda");
-  el.innerHTML = `
-    <div class="celebracao-cartao">
-      <span class="celebracao-icone">🚗</span>
-      <div class="celebracao-texto">
-        <b>${esc(vendedor)} vendeu!</b>
-        <small>${quantidade}x ${esc(modelo)} · ${esc(loja)}</small>
-      </div>
-    </div>`;
+function avisarVenda({ vendedor, modelo, loja, quantidade }) {
+  const el = document.getElementById("avisoVenda");
+  el.innerHTML = `<b>${esc(vendedor)} vendeu ${quantidade}x ${esc(modelo)}</b><small>${esc(loja)} · já está no painel</small>`;
   el.classList.add("mostrar");
-
-  for (let i = 0; i < 28; i++) {
-    const peca = document.createElement("span");
-    peca.className = "confete";
-    peca.style.left = `${Math.random() * 100}vw`;
-    peca.style.background = CORES_CONFETE[i % CORES_CONFETE.length];
-    peca.style.borderRadius = Math.random() > 0.5 ? "50%" : "2px";
-    peca.style.animationDuration = `${1.5 + Math.random() * 1.3}s`;
-    peca.style.animationDelay = `${Math.random() * 0.25}s`;
-    document.body.appendChild(peca);
-    setTimeout(() => peca.remove(), 3200);
-  }
-
-  clearTimeout(timerCelebracao);
-  timerCelebracao = setTimeout(() => el.classList.remove("mostrar"), 3400);
+  clearTimeout(timerAviso);
+  timerAviso = setTimeout(() => el.classList.remove("mostrar"), 3600);
 }
 
 // ==================== FORMULÁRIOS ====================
@@ -520,18 +534,25 @@ function popularFormularios() {
 function atualizarVendedores() {
   const lojaId = Number(document.getElementById("selLoja").value);
   const sel = document.getElementById("selVendedor");
+  const atual = sel.value;
   const daLoja = estado.bootstrap.vendedores.filter((v) => v.loja_id === lojaId);
   sel.innerHTML = daLoja.length
     ? daLoja.map((v) => `<option value="${v.id}">${esc(v.nome)}</option>`).join("")
     : '<option value="">(sem vendedor nessa loja)</option>';
+  // A atualização a cada 30 s não pode trocar o vendedor que a pessoa escolheu.
+  if (daLoja.some((v) => String(v.id) === atual)) sel.value = atual;
 }
 document.getElementById("selLoja").addEventListener("change", atualizarVendedores);
 
+function mostrarStatus(id, texto, tipo = "") {
+  const el = document.getElementById(id);
+  el.textContent = texto;
+  el.className = `status ${tipo}`.trim();
+}
+
 document.getElementById("formVenda").addEventListener("submit", async (evento) => {
   evento.preventDefault();
-  const status = document.getElementById("statusVenda");
-  status.textContent = "Registrando...";
-  status.className = "status-msg";
+  mostrarStatus("statusVenda", "Registrando…");
 
   const corpo = {
     lojaId: Number(document.getElementById("selLoja").value),
@@ -550,11 +571,10 @@ document.getElementById("formVenda").addEventListener("submit", async (evento) =
     });
     const dados = await resposta.json();
     if (!resposta.ok) throw new Error(dados.erro || "Erro ao registrar venda.");
-    status.textContent = "Venda registrada!";
-    status.className = "status-msg ok";
+    mostrarStatus("statusVenda", "Venda registrada.", "ok");
     estado.ultimaVendaId = dados.id;
     atualizarBotaoDesfazer();
-    celebrarVenda({
+    avisarVenda({
       vendedor: document.getElementById("selVendedor").selectedOptions[0]?.textContent || "Vendedor",
       modelo: document.getElementById("selModelo").selectedOptions[0]?.textContent || "carro",
       loja: document.getElementById("selLoja").selectedOptions[0]?.textContent || "",
@@ -570,8 +590,7 @@ document.getElementById("formVenda").addEventListener("submit", async (evento) =
     }
     await carregarTudo();
   } catch (erro) {
-    status.textContent = erro.message;
-    status.className = "status-msg err";
+    mostrarStatus("statusVenda", erro.message, "erro");
   }
 });
 
@@ -586,30 +605,24 @@ atualizarBotaoDesfazer();
 
 document.getElementById("btnDesfazer").addEventListener("click", async () => {
   if (estado.ultimaVendaId === null) return;
-  const status = document.getElementById("statusVenda");
-  status.textContent = "Removendo...";
-  status.className = "status-msg";
+  mostrarStatus("statusVenda", "Removendo…");
   try {
     const resposta = await fetch(`${API}/vendas/${estado.ultimaVendaId}`, { method: "DELETE" });
     const dados = await resposta.json();
     // 404 = já não existe (alguém removeu antes): o estado local também deve limpar.
     if (!resposta.ok && resposta.status !== 404) throw new Error(dados.erro || "Erro ao desfazer.");
-    status.textContent = resposta.ok ? "Seu último lançamento foi removido." : dados.erro;
-    status.className = resposta.ok ? "status-msg ok" : "status-msg err";
+    mostrarStatus("statusVenda", resposta.ok ? "Seu último lançamento foi removido." : dados.erro, resposta.ok ? "ok" : "erro");
     estado.ultimaVendaId = null;
     atualizarBotaoDesfazer();
     await carregarTudo();
   } catch (erro) {
-    status.textContent = erro.message;
-    status.className = "status-msg err";
+    mostrarStatus("statusVenda", erro.message, "erro");
   }
 });
 
 document.getElementById("formVendedor").addEventListener("submit", async (evento) => {
   evento.preventDefault();
-  const status = document.getElementById("statusVendedor");
-  status.textContent = "Salvando...";
-  status.className = "status-msg";
+  mostrarStatus("statusVendedor", "Salvando…");
   try {
     const resposta = await fetch(`${API}/vendedores`, {
       method: "POST",
@@ -621,13 +634,11 @@ document.getElementById("formVendedor").addEventListener("submit", async (evento
     });
     const dados = await resposta.json();
     if (!resposta.ok) throw new Error(dados.erro || "Erro ao cadastrar.");
-    status.textContent = "Vendedor cadastrado.";
-    status.className = "status-msg ok";
+    mostrarStatus("statusVendedor", "Vendedor cadastrado.", "ok");
     document.getElementById("cadNome").value = "";
     await carregarTudo();
   } catch (erro) {
-    status.textContent = erro.message;
-    status.className = "status-msg err";
+    mostrarStatus("statusVendedor", erro.message, "erro");
   }
 });
 
@@ -642,8 +653,5 @@ setInterval(carregarTudo, 30000);
  * quando foi criado e empurra o card para fora da tela. Forçar
  * resize() em todo gráfico vivo corrige isso de forma explícita. */
 window.addEventListener("resize", () => {
-  Object.values(graficos).forEach((g) => {
-    if (Array.isArray(g)) g.forEach((c) => c?.resize());
-    else g?.resize();
-  });
+  Object.values(graficos).forEach((g) => g?.resize());
 });

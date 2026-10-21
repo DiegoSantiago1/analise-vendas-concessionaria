@@ -4,174 +4,183 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Painel de Vendas — Grupo Horizonte Honda</title>
-  <meta name="description" content="Painel analítico de vendas de uma rede fictícia de concessionárias: metas, ranking por loja e vendedor, vendas por dia e mix de modelos.">
+  <meta name="description" content="Painel de vendas de uma rede fictícia de concessionárias Honda: ritmo da meta do mês, metas por loja, vendedores, modelos e lançamento de venda.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/styles.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 </head>
 <body>
 
-<div class="celebracao" id="celebracaoVenda" aria-live="polite"></div>
+<div class="aviso-venda" id="avisoVenda" role="status" aria-live="polite"></div>
 
 <div class="app">
 
-  <!-- ==================== SIDEBAR ==================== -->
-  <aside class="sidebar">
+  <!-- ==================== BARRA LATERAL ==================== -->
+  <aside class="lateral" id="lateral">
     <div class="marca">
-      <span class="marca-icone">H</span>
+      <!-- Símbolo do Grupo Horizonte: a linha do horizonte com o sol nascendo. -->
+      <svg class="marca-simbolo" viewBox="0 0 32 32" aria-hidden="true">
+        <rect width="32" height="32" rx="7" fill="#141414"/>
+        <path d="M9 19a7 7 0 0 1 14 0" fill="none" stroke="#fff" stroke-width="2.2"/>
+        <path d="M6 22.5h20" stroke="#cc0000" stroke-width="2.2"/>
+      </svg>
       <div>
-        <strong>Horizonte</strong>
-        <small>Honda</small>
+        <strong>Grupo Horizonte</strong>
+        <small>Concessionárias Honda · PE</small>
       </div>
     </div>
 
-    <nav class="nav-principal">
-      <button class="nav-item active" data-view="painel" title="Painel"><span class="nav-ic">▦</span><span class="nav-rotulo">Painel</span></button>
-      <button class="nav-item" data-view="lancamento" title="Lançar venda"><span class="nav-ic">✎</span><span class="nav-rotulo">Lançar venda</span></button>
+    <nav class="nav" aria-label="Seções">
+      <button class="nav-item ativo" data-view="painel" type="button">
+        <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2 2h5v5H2zM9 2h5v5H9zM2 9h5v5H2zM9 9h5v5H9z" fill="none" stroke="currentColor" stroke-width="1.4"/></svg>
+        Painel
+      </button>
+      <button class="nav-item" data-view="lancamento" type="button">
+        <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 3v10M3 8h10" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>
+        Lançar venda
+      </button>
     </nav>
 
-    <div class="sidebar-secao">Lojas</div>
+    <p class="grupo-rotulo">Lojas</p>
     <div class="lista-lojas" id="listaLojas"></div>
 
-    <div class="sidebar-rodape">
-      <span class="badge-live"><span class="dot"></span> ao vivo</span>
-      <small>dados fictícios</small>
-    </div>
+    <p class="lateral-rodape">Dados fictícios · atualiza a cada 30 s</p>
   </aside>
 
+  <!-- Barra do celular: a lateral vira um menu de tela cheia. -->
+  <header class="barra-celular">
+    <strong id="tituloCelular">Painel</strong>
+    <button type="button" class="botao-menu" id="botaoMenu" aria-expanded="false" aria-controls="lateral">Menu</button>
+  </header>
+
   <!-- ==================== CONTEÚDO ==================== -->
-  <div class="conteudo">
+  <main class="conteudo">
+    <!--AVISO_DEMO-->
 
-    <header class="topbar">
-      <div class="breadcrumb">
-        <span>Painel</span> <i>/</i> <strong id="bcEscopo">Todas as lojas</strong>
+    <!-- ============ VIEW: PAINEL ============ -->
+    <section class="view ativa" id="view-painel" aria-labelledby="tituloPainel">
+
+      <div class="titulo-linha">
+        <div>
+          <h1 id="tituloPainel"><span id="rotuloMes">—</span> · <span id="bcEscopo">Todas as lojas</span></h1>
+          <p class="achado" id="achado">Carregando…</p>
+        </div>
+        <div class="titulo-acoes">
+          <div class="seletor-mes" role="group" aria-label="Mês">
+            <button type="button" id="mesAnterior" aria-label="Mês anterior">‹</button>
+            <button type="button" id="mesProximo" aria-label="Próximo mês">›</button>
+          </div>
+          <button type="button" class="botao-primario" data-ir="lancamento">Lançar venda</button>
+        </div>
       </div>
 
-      <div class="seletor-mes">
-        <button id="mesAnterior" aria-label="Mês anterior">‹</button>
-        <span id="rotuloMes">—</span>
-        <button id="mesProximo" aria-label="Próximo mês">›</button>
-      </div>
-
-      <div class="topbar-dir">
-        <span id="dataHoje" class="chip"></span>
-      </div>
-    </header>
-
-    <main>
-      <!-- ============ VIEW: PAINEL ============ -->
-      <section class="view active" id="view-painel">
-
-        <div class="grid-topo">
-          <article class="card card-donut">
-            <h3>Meta do mês</h3>
-            <div class="donut-wrap">
-              <canvas id="donutMeta"></canvas>
-              <div class="donut-centro"><b id="donutMetaPct">0%</b><small>atingido</small></div>
-            </div>
-            <p class="card-legenda" id="legendaMeta">—</p>
-          </article>
-
-          <article class="card card-donut">
-            <h3>Mix por categoria</h3>
-            <div class="donut-wrap">
-              <canvas id="donutCategoria"></canvas>
-              <div class="donut-centro"><b id="donutCategoriaTotal">0</b><small>carros</small></div>
-            </div>
-            <p class="card-legenda" id="legendaCategoria">—</p>
-          </article>
-
-          <article class="card card-donut">
-            <h3>Forma de pagamento</h3>
-            <div class="donut-wrap">
-              <canvas id="donutPagamento"></canvas>
-              <div class="donut-centro"><b id="donutPagamentoPct">0%</b><small>financiado</small></div>
-            </div>
-            <p class="card-legenda" id="legendaPagamento">—</p>
-          </article>
-
-          <article class="card card-destaque">
-            <h3>Faturamento no mês</h3>
-            <div class="numero-gigante" id="kpiFaturamento">R$ 0</div>
-            <div class="sub-kpis">
-              <div><small>Vendas</small><b id="kpiVendas">0</b></div>
-              <div><small>Ticket médio</small><b id="kpiTicket">R$ 0</b></div>
-              <div><small>Dias com venda</small><b id="kpiDias">0</b></div>
-            </div>
-          </article>
-
-          <article class="card card-barras">
-            <h3>Modelos mais vendidos</h3>
-            <div id="barrasModelos" class="barras-lista"></div>
-          </article>
+      <!-- O bloco que responde a pergunta da tela: a rede vai bater a meta? -->
+      <article class="card card-principal" aria-labelledby="tituloRitmo">
+        <h2 id="tituloRitmo" class="visualmente-oculto">Ritmo do mês</h2>
+        <div class="kpis" role="tablist" aria-label="Série do gráfico">
+          <button class="kpi ativo" role="tab" aria-selected="true" data-serie="carros" type="button">
+            <span class="kpi-rotulo">Carros vendidos</span>
+            <span class="kpi-valor"><b id="kpiCarros">0</b> <small id="kpiMeta">de 0</small></span>
+          </button>
+          <button class="kpi" role="tab" aria-selected="false" data-serie="faturamento" type="button">
+            <span class="kpi-rotulo">Faturamento</span>
+            <span class="kpi-valor"><b id="kpiFaturamento">R$ 0</b></span>
+          </button>
+          <div class="kpi kpi-fixo">
+            <span class="kpi-rotulo">Ticket médio</span>
+            <span class="kpi-valor"><span id="kpiTicket">R$ 0</span></span>
+          </div>
+          <div class="kpi kpi-fixo">
+            <span class="kpi-rotulo">Dias com venda</span>
+            <span class="kpi-valor"><span id="kpiDias">0</span></span>
+          </div>
         </div>
-
-        <div class="grid-meio">
-          <article class="card">
-            <div class="card-cabecalho">
-              <h3>Vendas por dia</h3>
-              <span class="card-nota" id="notaVendasDia">—</span>
-            </div>
-            <div class="chart-box chart-box--alto"><canvas id="chartDiario"></canvas></div>
-          </article>
-
-          <article class="card">
-            <h3>Ranking de lojas</h3>
-            <div class="chart-box"><canvas id="chartLojas"></canvas></div>
-          </article>
+        <div class="grafico-cabecalho">
+          <p id="legendaRitmo" class="legenda"></p>
+          <p class="nota" id="notaRitmo">—</p>
         </div>
+        <div class="grafico grafico-principal"><canvas id="chartRitmo" aria-label="Vendas acumuladas no mês contra o ritmo da meta"></canvas></div>
+      </article>
 
-        <div class="grid-baixo">
-          <article class="card">
-            <div class="card-cabecalho">
-              <h3>Calendário de vendas</h3>
-              <span class="card-nota">intensidade = nº de carros</span>
-            </div>
-            <div class="calendario" id="calendario"></div>
-            <div class="calendario-escala">
-              <small>menos</small>
-              <span class="escala-caixa n0"></span>
-              <span class="escala-caixa n1"></span>
-              <span class="escala-caixa n2"></span>
-              <span class="escala-caixa n3"></span>
-              <span class="escala-caixa n4"></span>
-              <small>mais</small>
-            </div>
-          </article>
-
-          <article class="card">
-            <h3>Top vendedores</h3>
-            <div id="listaVendedores" class="ranking-lista"></div>
-          </article>
-        </div>
-
-        <article class="card">
-          <h3>Metas por loja</h3>
-          <div class="aneis-grid" id="aneisMetas"></div>
+      <div class="grade-dupla">
+        <article class="card" aria-labelledby="tituloLojas">
+          <div class="card-cabecalho">
+            <h2 id="tituloLojas">Metas por loja</h2>
+            <p class="nota">carros vendidos / meta do mês</p>
+          </div>
+          <table class="tabela tabela-lojas">
+            <thead><tr><th scope="col">Loja</th><th scope="col" class="num">Carros</th><th scope="col">Meta</th><th scope="col" class="num">Faturamento</th></tr></thead>
+            <tbody id="tabelaLojas"></tbody>
+          </table>
         </article>
 
-      </section>
+        <article class="card" aria-labelledby="tituloVendedores">
+          <div class="card-cabecalho">
+            <h2 id="tituloVendedores">Vendedores do mês</h2>
+            <button type="button" class="botao-link" id="verTodosVendedores">Ver todos</button>
+          </div>
+          <table class="tabela">
+            <thead><tr><th scope="col" class="num pos">#</th><th scope="col">Vendedor</th><th scope="col" class="num">Carros</th><th scope="col" class="num">Faturamento</th></tr></thead>
+            <tbody id="tabelaVendedores"></tbody>
+          </table>
+        </article>
+      </div>
 
-      <!-- ============ VIEW: LANÇAMENTO ============ -->
-      <section class="view" id="view-lancamento">
-        <article class="card">
-          <h3>Registrar venda</h3>
-          <form id="formVenda" class="form-grid">
-            <div>
+      <div class="grade-tripla">
+        <article class="card" aria-labelledby="tituloModelos">
+          <div class="card-cabecalho"><h2 id="tituloModelos">Modelos mais vendidos</h2><p class="nota">carros</p></div>
+          <div class="barras" id="barrasModelos"></div>
+        </article>
+
+        <article class="card" aria-labelledby="tituloMix">
+          <div class="card-cabecalho"><h2 id="tituloMix">Como o cliente comprou</h2><p class="nota">carros</p></div>
+          <h3 class="subtitulo">Forma de pagamento</h3>
+          <div class="barras" id="barrasPagamento"></div>
+          <h3 class="subtitulo">Categoria</h3>
+          <div class="barras" id="barrasCategoria"></div>
+        </article>
+
+        <article class="card" aria-labelledby="tituloCalendario">
+          <div class="card-cabecalho"><h2 id="tituloCalendario">Calendário de vendas</h2><p class="nota" id="notaCalendario">—</p></div>
+          <div class="calendario" id="calendario"></div>
+          <div class="calendario-escala" aria-hidden="true">
+            <span>0</span><i class="n0"></i><i class="n1"></i><i class="n2"></i><i class="n3"></i><i class="n4"></i><span id="escalaMaximo">—</span>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <!-- ============ VIEW: LANÇAMENTO ============ -->
+    <section class="view" id="view-lancamento" aria-labelledby="tituloLancamento">
+      <div class="titulo-linha">
+        <div>
+          <h1 id="tituloLancamento">Lançar venda</h1>
+          <p class="achado">A venda entra no painel na hora, na loja e no mês em que foi lançada.</p>
+        </div>
+        <div class="titulo-acoes">
+          <button type="button" class="botao-secundario" data-ir="painel">Voltar ao painel</button>
+        </div>
+      </div>
+
+      <div class="grade-lancamento">
+        <article class="card" aria-labelledby="tituloRegistrar">
+          <h2 id="tituloRegistrar">Registrar venda</h2>
+          <form id="formVenda" class="formulario">
+            <div class="campo">
               <label for="selLoja">Loja</label>
               <select id="selLoja" required></select>
             </div>
-            <div>
+            <div class="campo">
               <label for="selVendedor">Vendedor</label>
               <select id="selVendedor" required></select>
             </div>
-            <div>
+            <div class="campo">
               <label for="selModelo">Modelo</label>
               <select id="selModelo" required></select>
             </div>
-            <div>
+            <div class="campo">
               <label for="selFormaPagamento">Pagamento</label>
               <select id="selFormaPagamento" required>
                 <option value="A vista">À vista</option>
@@ -179,47 +188,49 @@
                 <option value="Consorcio">Consórcio</option>
               </select>
             </div>
-            <div>
+            <div class="campo">
               <label for="numQtd">Quantidade</label>
               <input id="numQtd" type="number" min="1" value="1" required>
             </div>
-            <div>
+            <div class="campo">
               <label for="txtCliente">Cliente (opcional)</label>
               <input id="txtCliente" type="text" placeholder="Nome do cliente">
             </div>
-            <div class="btn-row">
-              <button type="submit" class="btn-primary">Registrar venda</button>
-              <button type="button" class="btn-secondary" id="btnDesfazer">Desfazer meu último lançamento</button>
+            <div class="botoes">
+              <button type="submit" class="botao-primario">Registrar venda</button>
+              <button type="button" class="botao-secundario" id="btnDesfazer">Desfazer meu último lançamento</button>
             </div>
           </form>
-          <p class="status-msg" id="statusVenda"></p>
+          <p class="status" id="statusVenda"></p>
         </article>
 
-        <article class="card">
-          <h3>Cadastro rápido de vendedor</h3>
-          <form id="formVendedor" class="form-grid">
-            <div>
-              <label for="cadLoja">Loja</label>
-              <select id="cadLoja" required></select>
-            </div>
-            <div>
-              <label for="cadNome">Nome do vendedor</label>
-              <input id="cadNome" type="text" required>
-            </div>
-            <div class="btn-row">
-              <button type="submit" class="btn-secondary">Adicionar ao cadastro</button>
-            </div>
-          </form>
-          <p class="status-msg" id="statusVendedor"></p>
-        </article>
+        <div class="coluna">
+          <article class="card" aria-labelledby="tituloFeed">
+            <h2 id="tituloFeed">Últimos lançamentos</h2>
+            <div class="feed" id="feedUltimos"></div>
+          </article>
 
-        <article class="card">
-          <h3>Últimos lançamentos</h3>
-          <div class="feed-scroll" id="feedUltimos"></div>
-        </article>
-      </section>
-    </main>
-  </div>
+          <article class="card" aria-labelledby="tituloCadastro">
+            <h2 id="tituloCadastro">Cadastrar vendedor</h2>
+            <form id="formVendedor" class="formulario formulario-curto">
+              <div class="campo">
+                <label for="cadLoja">Loja</label>
+                <select id="cadLoja" required></select>
+              </div>
+              <div class="campo">
+                <label for="cadNome">Nome do vendedor</label>
+                <input id="cadNome" type="text" required>
+              </div>
+              <div class="botoes">
+                <button type="submit" class="botao-secundario">Adicionar ao cadastro</button>
+              </div>
+            </form>
+            <p class="status" id="statusVendedor"></p>
+          </article>
+        </div>
+      </div>
+    </section>
+  </main>
 </div>
 
 <script src="js/app.js"></script>

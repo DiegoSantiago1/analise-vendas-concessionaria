@@ -96,7 +96,7 @@ Schema completo: [`db/schema.sql`](db/schema.sql).
 
 **Validação e erros.** Toda entrada é validada na borda: corpo que não é JSON, tipos errados, ids fora do intervalo do `INT` e nomes longos demais respondem 400 (nunca 500), e vendedor repetido responde 409. O banco continua sendo a última barreira, então as regras de integridade não dependem da API estar certa. O `/api/health` consulta o banco (responde 503 se ele cair) e o pool de conexões trata o evento `error`, então a API sobrevive a uma queda do Postgres e volta sozinha quando ele volta.
 
-**XSS.** Nomes de cliente, vendedor, loja e modelo passam por uma função de escape antes de entrar no HTML. Encontrei o problema testando: um `<img onerror=...>` digitado no campo "Cliente" executava como código no painel de quem abrisse a tela. O teste que reproduz isso roda contra a API real e contra a demo.
+**XSS.** Nomes de cliente, vendedor, loja e modelo passam por uma função de escape antes de entrar no HTML. Encontrei o problema testando: um `<img onerror=...>` digitado no campo "Cliente" executava como código no painel de quem abrisse a tela. Conferi a correção com navegador automatizado (Playwright), contra a API real e contra a demo: o nome aparece como texto e nenhum `<img>` entra na página.
 
 **"Desfazer" só apaga o que você lançou.** A versão inicial removia "a última venda do banco", que com dois usuários poderia ser a de outra pessoa. Agora o painel guarda o id da venda lançada na própria sessão e a API remove por id (`DELETE /api/vendas/:id`). Não há autenticação (é um protótipo de portfólio), então isso evita o acidente, mas não impede quem chama a API de propósito.
 
@@ -153,10 +153,11 @@ node scripts/build_demo.mjs       # gera demo/dist: front-end + camada de API
 
 ## Funcionalidades
 
+- **Ritmo da meta**: o maior bloco da tela mostra os carros vendidos no mês, acumulados dia a dia, contra a linha do ritmo necessário para bater a meta. A frase embaixo do título diz quanto falta e qual loja está mais longe da meta. Uma aba troca a série para o faturamento.
 - **Painel geral e por loja**: clicar numa loja na barra lateral filtra KPIs, gráficos, calendário e ranking só para ela.
 - **Navegação por mês**: setas no topo percorrem o histórico; não é possível avançar além do mês atual.
-- **Calendário de vendas**: intensidade de cor proporcional ao volume do dia, com o dia de hoje destacado.
-- **Lançamento de venda**: formulário com validação de loja/vendedor/modelo e feedback animado mostrando quem vendeu e qual carro. "Desfazer" remove só o lançamento da própria sessão.
+- **Calendário de vendas**: tom proporcional ao volume do dia, com o melhor dia do mês e o dia de hoje destacados.
+- **Lançamento de venda**: formulário com validação de loja/vendedor/modelo e um aviso mostrando quem vendeu e qual carro. "Desfazer" remove só o lançamento da própria sessão.
 - **Cadastro rápido de vendedor** numa loja já existente.
 - Atualização automática a cada 30 segundos.
 
