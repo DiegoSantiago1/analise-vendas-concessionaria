@@ -1,8 +1,9 @@
 /* Painel de Vendas — Grupo Horizonte Honda
  *
- * Estilo "livro-caixa": nada de cor na moldura. Números em tinta preta, o vermelho
- * Honda só no dado principal (a linha do mês e a meta que falta), o cinza para
- * comparação. Fundo "pedra", o tom de um salão de loja; cards brancos, sem sombra.
+ * As cores da marca: preto e vermelho Honda. Fundo preto, cards grafite, texto
+ * branco; o vermelho marca tudo que é ação ou destaque (item ativo, indicador
+ * escolhido, botão principal, a linha do mês, as barras e o calendário). O cinza
+ * fica para comparação (o ritmo da meta) e para o texto de apoio.
  *
  * Grade do conteúdo (1440 px): lateral de 256 px + conteúdo de 1184 px com 32 px de
  * margem dos dois lados = 1120 px úteis. Dupla: 2 × 554 + 12 de vão = 1120. Tripla:
@@ -10,19 +11,22 @@
  */
 
 :root {
-  --chao: #f4f3f1;          /* fundo "pedra" */
-  --superficie: #ffffff;
-  --elevado: #ecebe8;
-  --borda: #e4e2de;
-  --regra: #efedea;
-  --controle: #d2d0cc;
-  --tinta: #0a0a0a;
-  --apagado: #66625c;
-  --acento: #141414;        /* o botão principal é quase preto */
-  --dado: #cc0000;          /* vermelho Honda: só no dado principal */
-  --positivo: #2e7d32;
-  --negativo: #c4242a;
-  --pilula-positiva-fundo: #dcfae5; --pilula-positiva-tinta: #04250e;
+  --chao: #070708;           /* fundo preto */
+  --lateral-fundo: #000000;
+  --superficie: #131315;     /* cards grafite */
+  --elevado: #1d1d21;
+  --borda: #232327;
+  --regra: #232327;
+  --controle: #34343a;
+  --tinta: #f5f5f6;
+  --apagado: #a1a1aa;        /* 7:1 sobre o card */
+  --acento: #e60012;         /* vermelho Honda: ação e destaque */
+  --acento-forte: #ff1f2e;
+  --acento-escuro: #8c0010;
+  --dado: #ff2433;           /* vermelho do dado, mais claro para ler no preto */
+  --positivo: #4ade80;
+  --negativo: #ff5a63;
+  --pilula-positiva-fundo: #ffffff; --pilula-positiva-tinta: #070708;
   --raio-card: 8px;
   --raio-controle: 6px;
   --linha: 44px;
@@ -54,7 +58,7 @@ body {
 
 button, input, select { font: inherit; color: inherit; }
 button { cursor: pointer; background: none; border: 0; }
-:focus-visible { outline: 2px solid var(--tinta); outline-offset: 2px; }
+:focus-visible { outline: 2px solid var(--acento-forte); outline-offset: 2px; }
 
 .visualmente-oculto {
   position: absolute; width: 1px; height: 1px; overflow: hidden;
@@ -73,7 +77,8 @@ b, .kpi-valor, .tabela td.num, .barra-valor, .cal-total, .lista-lojas .qtd {
   position: sticky; top: 0; height: 100vh; overflow-y: auto;
   padding: 20px 12px 16px;
   display: flex; flex-direction: column;
-  background: var(--chao);
+  background: var(--lateral-fundo);
+  border-right: 1px solid var(--borda);
 }
 
 .marca { display: flex; align-items: center; gap: 10px; padding: 4px 8px 20px; }
@@ -90,13 +95,14 @@ b, .kpi-valor, .tabela td.num, .barra-valor, .cal-total, .lista-lojas .qtd {
 }
 .nav-item svg { width: 16px; height: 16px; flex: none; }
 .nav-item:hover, .loja-item:hover { background: var(--elevado); color: var(--tinta); }
-.nav-item.ativo, .loja-item.ativo { background: #e6e4e0; color: var(--tinta); font-weight: 500; }
+.nav-item.ativo { background: var(--acento); color: #fff; font-weight: 500; }
+.loja-item.ativo { background: var(--elevado); color: var(--tinta); font-weight: 500; box-shadow: inset 3px 0 0 var(--acento); }
 
 .grupo-rotulo { margin: 32px 10px 6px; font-size: var(--fs-pequeno); color: var(--apagado); }
 .lista-lojas { display: flex; flex-direction: column; gap: 2px; }
 .loja-item span:first-child { flex: 1; }
 .loja-item .qtd { color: var(--apagado); }
-.loja-item.ativo .qtd { color: var(--tinta); }
+.loja-item.ativo .qtd { color: var(--dado); }
 
 .lateral-rodape { margin-top: auto; padding: 16px 10px 0; font-size: var(--fs-pequeno); color: var(--apagado); }
 
@@ -108,10 +114,10 @@ b, .kpi-valor, .tabela td.num, .barra-valor, .cal-total, .lista-lojas .qtd {
 .aviso-demo {
   display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: baseline;
   margin-bottom: 24px; padding: 10px 14px;
-  background: var(--elevado); border-radius: var(--raio-controle);
+  background: var(--superficie); border-left: 3px solid var(--acento); border-radius: var(--raio-controle);
   font-size: 13px; color: var(--tinta);
 }
-.aviso-demo a { color: var(--tinta); }
+.aviso-demo a { color: var(--dado); }
 
 /* ==================== TÍTULO DA TELA ==================== */
 .view { display: none; }
@@ -121,17 +127,18 @@ b, .kpi-valor, .tabela td.num, .barra-valor, .cal-total, .lista-lojas .qtd {
   display: flex; justify-content: space-between; align-items: flex-start; gap: 16px;
   padding: 0 var(--respiro) 20px;   /* recuado o mesmo que o miolo dos cards: uma borda só */
 }
-h1 { font-size: var(--fs-titulo); font-weight: 500; letter-spacing: -0.01em; line-height: 1.25; }
-.achado { margin-top: 4px; font-size: 15px; color: var(--tinta); max-width: 70ch; }
+h1 { font-size: 28px; font-weight: 600; letter-spacing: -0.02em; line-height: 1.2; }
+h1 #bcEscopo { color: var(--dado); }
+.achado { margin-top: 6px; font-size: 15px; color: var(--apagado); max-width: 70ch; }
 .achado .falta { color: var(--dado); font-weight: 500; }
 .titulo-acoes { display: flex; gap: 8px; align-items: center; flex: none; }
 
 .seletor-mes { display: flex; gap: 2px; }
 .seletor-mes button {
   width: var(--altura-controle); height: var(--altura-controle); border-radius: var(--raio-controle);
-  background: var(--superficie); border: 1px solid var(--borda); font-size: 18px; line-height: 1;
+  background: var(--superficie); border: 1px solid var(--controle); font-size: 18px; line-height: 1;
 }
-.seletor-mes button:hover:not(:disabled) { background: var(--elevado); }
+.seletor-mes button:hover:not(:disabled) { border-color: var(--acento); color: var(--dado); }
 .seletor-mes button:disabled { color: var(--controle); cursor: default; }
 
 .botao-primario, .botao-secundario {
@@ -139,20 +146,22 @@ h1 { font-size: var(--fs-titulo); font-weight: 500; letter-spacing: -0.01em; lin
   font-weight: 500; transition: background-color .15s, transform .1s;
 }
 .botao-primario { background: var(--acento); color: #fff; }
-.botao-primario:hover { background: #2c2c2c; }
-.botao-secundario { background: #e5e5e5; color: var(--tinta); }
-.botao-secundario:hover:not(:disabled) { background: #d9d9d9; }
+.botao-primario:hover { background: var(--acento-forte); }
+.botao-secundario { background: var(--elevado); color: var(--tinta); border: 1px solid var(--controle); }
+.botao-secundario:hover:not(:disabled) { border-color: var(--acento); }
 .botao-primario:active, .botao-secundario:active { transform: translateY(1px); }
-.botao-secundario:disabled { color: #8a867f; cursor: default; }
+.botao-secundario:disabled { color: #6b6b73; cursor: default; }
 .botao-link { color: var(--apagado); font-size: 13px; text-decoration: underline; text-underline-offset: 3px; }
-.botao-link:hover { color: var(--tinta); }
+.botao-link:hover { color: var(--dado); }
 
 /* ==================== CARDS ==================== */
 .card {
   background: var(--superficie); border: 1px solid var(--borda); border-radius: var(--raio-card);
   padding: 20px var(--respiro);
 }
-h2 { font-size: var(--fs-secao); font-weight: 500; }
+/* O card principal abre com uma faixa vermelha: é o bloco que responde se a rede bate a meta. */
+.card-principal { border-top: 3px solid var(--acento); }
+h2 { font-size: var(--fs-secao); font-weight: 600; }
 .card-cabecalho { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin-bottom: 12px; }
 .nota { font-size: var(--fs-pequeno); color: var(--apagado); }
 .subtitulo { font-size: 13px; font-weight: 500; color: var(--apagado); margin: 0 0 8px; }
@@ -162,16 +171,16 @@ h2 { font-size: var(--fs-secao); font-weight: 500; }
 .grade-tripla { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--vao); margin-top: var(--vao); }
 
 /* ==================== CARD PRINCIPAL ==================== */
-.kpis { display: grid; grid-template-columns: repeat(4, 1fr); border-bottom: 1px solid var(--regra); margin: -4px 0 16px; }
+.kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin: 0 0 18px; }
 .kpi {
   display: flex; flex-direction: column; gap: 2px; text-align: left;
-  padding: 4px 16px 14px 0; border-bottom: 2px solid transparent; margin-bottom: -1px;
+  padding: 12px 14px; border-radius: var(--raio-controle); background: var(--elevado);
 }
-button.kpi { transition: border-color .15s; }
-button.kpi:hover { border-bottom-color: var(--controle); }
-.kpi.ativo { border-bottom-color: var(--tinta); }
+button.kpi { transition: background-color .15s; }
+button.kpi:hover { background: #26262b; }
+.kpi.ativo, button.kpi.ativo:hover { background: var(--acento); color: #fff; }
 .kpi-rotulo { font-size: 13px; color: var(--apagado); }
-.kpi.ativo .kpi-rotulo { color: var(--tinta); }
+.kpi.ativo .kpi-rotulo, .kpi.ativo .kpi-valor small { color: rgba(255, 255, 255, .85); }
 .kpi-valor { font-size: var(--fs-kpi); line-height: 1.15; letter-spacing: -0.02em; font-weight: 400; }
 .kpi-valor b { font-weight: 700; }
 button.kpi:not(.ativo) .kpi-valor b { font-weight: 500; }
@@ -180,10 +189,10 @@ button.kpi:not(.ativo) .kpi-valor b { font-weight: 500; }
 .grafico-cabecalho { display: flex; justify-content: space-between; gap: 12px; align-items: baseline; margin-bottom: 8px; }
 .legenda { display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: var(--fs-pequeno); color: var(--apagado); }
 .legenda i { display: inline-block; width: 14px; height: 0; margin-right: 6px; vertical-align: middle; border-top: 2.5px solid var(--dado); }
-.legenda i.meta { border-top: 2px dashed #8a8a8a; }
+.legenda i.meta { border-top: 2px dashed #8b8b93; }
 
 .grafico { position: relative; width: 100%; }
-.grafico-principal { height: 248px; }
+.grafico-principal { height: 268px; }
 
 /* ==================== TABELAS ==================== */
 .tabela { width: 100%; border-collapse: collapse; }
@@ -201,18 +210,18 @@ button.kpi:not(.ativo) .kpi-valor b { font-weight: 500; }
 .tabela .sub { display: block; font-size: var(--fs-pequeno); color: var(--apagado); line-height: 1.2; }
 .tabela td .nome { display: block; line-height: 1.25; }
 .tabela tbody tr { transition: background-color .15s; }
-.tabela tbody tr:hover { background: #faf9f7; }
+.tabela tbody tr:hover { background: var(--elevado); }
 
-/* Barra de meta: preenchido em tinta, o que falta em cinza claro. */
+/* Barra de meta: preenchido em vermelho, o que falta em grafite. */
 .meta-celula { width: 44%; }
 .meta-barra { display: flex; align-items: center; gap: 10px; }
 .meta-trilho { position: relative; flex: 1; height: 8px; background: var(--elevado); border-radius: 2px; overflow: hidden; }
-.meta-preenchido { position: absolute; inset: 0 auto 0 0; background: var(--tinta); border-radius: 2px; }
+.meta-preenchido { position: absolute; inset: 0 auto 0 0; background: var(--acento); border-radius: 2px; }
 .meta-pct { width: 44px; text-align: right; font-variant-numeric: tabular-nums; }
 .meta-pct.abaixo { color: var(--dado); font-weight: 500; }
 .pilula {
   display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: var(--fs-pequeno);
-  background: var(--pilula-positiva-fundo); color: var(--pilula-positiva-tinta);
+  background: var(--pilula-positiva-fundo); color: var(--pilula-positiva-tinta); font-weight: 600;
 }
 
 /* ==================== BARRAS (modelos, pagamento, categoria) ==================== */
@@ -221,7 +230,8 @@ button.kpi:not(.ativo) .kpi-valor b { font-weight: 500; }
 .barra-nome { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .barra-valor small { color: var(--apagado); margin-left: 6px; }
 .barra-trilho { height: 6px; background: var(--elevado); border-radius: 2px; overflow: hidden; }
-.barra-preenchida { height: 100%; background: var(--tinta); border-radius: 2px; }
+.barra-preenchida { height: 100%; background: var(--acento); border-radius: 2px; }
+.barras .barra:first-child .barra-preenchida { background: var(--acento-forte); }
 
 /* ==================== CALENDÁRIO ==================== */
 .calendario { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
@@ -234,21 +244,21 @@ button.kpi:not(.ativo) .kpi-valor b { font-weight: 500; }
 .cal-dia.vazio { background: transparent; }
 .cal-data { color: var(--apagado); }
 .cal-total { align-self: flex-end; font-size: 13px; font-weight: 500; }
-/* Intensidade em tons de tinta: o número no quadrado continua legível em todos. */
-.cal-dia.n0 .cal-total { color: #8a867f; font-weight: 400; }
-.cal-dia.n1 { background: #dcdad6; }
-.cal-dia.n2 { background: #b9b6b1; }
-.cal-dia.n3 { background: #6e6a65; color: #fff; }
-.cal-dia.n4 { background: #1f1d1b; color: #fff; }
-.cal-dia.n3 .cal-data, .cal-dia.n4 .cal-data { color: rgba(255,255,255,.78); }
-.cal-dia.melhor { outline: 2px solid var(--dado); outline-offset: -2px; }
+/* Intensidade em vermelho, do grafite ao vermelho Honda; o número segue legível em todos. */
+.cal-dia.n0 .cal-total { color: #6b6b73; font-weight: 400; }
+.cal-dia.n1 { background: #3a0a10; }
+.cal-dia.n2 { background: #6e0d18; }
+.cal-dia.n3 { background: #a80f1e; }
+.cal-dia.n4 { background: #e60012; }
+.cal-dia.n1 .cal-data, .cal-dia.n2 .cal-data, .cal-dia.n3 .cal-data, .cal-dia.n4 .cal-data { color: rgba(255,255,255,.75); }
+.cal-dia.melhor { outline: 2px solid #ffffff; outline-offset: -2px; }
 .cal-dia.hoje::after {
-  content: ""; position: absolute; left: 5px; right: 5px; bottom: 2px; height: 2px; background: var(--dado);
+  content: ""; position: absolute; left: 5px; right: 5px; bottom: 2px; height: 2px; background: #ffffff;
 }
 .calendario-escala { display: flex; align-items: center; justify-content: flex-end; gap: 4px; margin-top: 10px; font-size: 11px; color: var(--apagado); }
 .calendario-escala i { width: 14px; height: 10px; border-radius: 2px; background: var(--elevado); }
-.calendario-escala .n1 { background: #dcdad6; } .calendario-escala .n2 { background: #b9b6b1; }
-.calendario-escala .n3 { background: #6e6a65; } .calendario-escala .n4 { background: #1f1d1b; }
+.calendario-escala .n1 { background: #3a0a10; } .calendario-escala .n2 { background: #6e0d18; }
+.calendario-escala .n3 { background: #a80f1e; } .calendario-escala .n4 { background: #e60012; }
 
 /* ==================== LANÇAMENTO ==================== */
 .grade-lancamento { display: grid; grid-template-columns: 1.4fr 1fr; gap: var(--vao); align-items: start; }
@@ -259,9 +269,9 @@ button.kpi:not(.ativo) .kpi-valor b { font-weight: 500; }
 .campo label { font-size: 13px; color: var(--apagado); }
 .campo select, .campo input {
   height: var(--altura-controle); padding: 0 10px; border-radius: var(--raio-controle);
-  background: var(--superficie); border: 1px solid var(--controle);
+  background: #0d0d0f; border: 1px solid var(--controle); color: var(--tinta);
 }
-.campo select:hover, .campo input:hover { border-color: #a9a6a1; }
+.campo select:hover, .campo input:hover, .campo select:focus, .campo input:focus { border-color: var(--acento); }
 .botoes { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
 .status { margin-top: 12px; font-size: 13px; color: var(--apagado); min-height: 1.4em; }
 .status.ok { color: var(--positivo); }
@@ -280,13 +290,13 @@ button.kpi:not(.ativo) .kpi-valor b { font-weight: 500; }
   position: fixed; right: 24px; bottom: 24px; z-index: 50;
   padding: 12px 16px; border-radius: var(--raio-card);
   background: var(--acento); color: #fff;
-  box-shadow: 0 8px 24px rgba(0,0,0,.18);   /* flutua: é a única sombra da tela. taste-skill-ignore */
+  box-shadow: 0 8px 24px rgba(0,0,0,.5);   /* flutua: é a única sombra da tela. taste-skill-ignore */
   opacity: 0; transform: translateY(12px); pointer-events: none;
   transition: opacity .25s, transform .25s;
 }
 .aviso-venda.mostrar { opacity: 1; transform: none; }
 .aviso-venda b { display: block; font-weight: 500; }
-.aviso-venda small { color: rgba(255,255,255,.78); }
+.aviso-venda small { color: rgba(255,255,255,.85); }
 
 /* ==================== TELAS MENORES ==================== */
 @media (max-width: 1180px) {
@@ -301,10 +311,10 @@ button.kpi:not(.ativo) .kpi-valor b { font-weight: 500; }
   .barra-celular {
     display: flex; justify-content: space-between; align-items: center;
     position: sticky; top: 0; z-index: 40; height: 48px; padding: 0 16px;
-    background: var(--chao); border-bottom: 1px solid var(--borda);
+    background: var(--lateral-fundo); border-bottom: 2px solid var(--acento);
   }
   .barra-celular strong { font-weight: 500; }
-  .botao-menu { height: 32px; padding: 0 12px; border-radius: var(--raio-controle); background: #e5e5e5; font-weight: 500; }
+  .botao-menu { height: 32px; padding: 0 12px; border-radius: var(--raio-controle); background: var(--acento); color: #fff; font-weight: 500; }
   .lateral { display: none; position: fixed; inset: 48px 0 0; height: auto; z-index: 45; padding: 16px; }
   .lateral.aberta { display: flex; }
   .lateral .marca { display: none; }
@@ -312,9 +322,8 @@ button.kpi:not(.ativo) .kpi-valor b { font-weight: 500; }
   .titulo-linha { flex-direction: column; padding: 0 0 16px; }
   .grade-dupla, .grade-tripla, .grade-lancamento { grid-template-columns: minmax(0, 1fr); }
   .grade-tripla > .card:last-child { grid-column: auto; }
-  .kpis { grid-template-columns: 1fr 1fr; border-bottom: 0; gap: 8px; }
-  .kpi { padding: 10px 12px; border: 0; margin: 0; border-radius: var(--raio-controle); background: #f7f6f4; }
-  .kpi.ativo { background: var(--elevado); }
+  .kpis { grid-template-columns: 1fr 1fr; }
+  .kpi { padding: 10px 12px; }
   .kpi-valor { font-size: 24px; }
   .grafico-principal { height: 190px; }
   .grafico-cabecalho { flex-direction: column; gap: 2px; }

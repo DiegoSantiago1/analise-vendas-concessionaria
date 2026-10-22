@@ -9,14 +9,14 @@
 
 const API = "/api";
 
-// Cores: a moldura não tem cor. Tinta para os números, cinza para comparação,
-// e o vermelho Honda só no dado principal (a linha do mês).
+// Cores da marca: vermelho Honda na linha do mês (com a área embaixo), cinza para
+// o ritmo da meta, grade discreta sobre o card grafite.
 const COR = {
-  dado: "#cc0000",
-  tinta: "#0a0a0a",
-  cinza: "#8a8a8a",
-  grade: "#efedea",
-  rotulo: "#66625c",
+  dado: "#ff2433",
+  area: "rgba(230, 0, 18, 0.22)",
+  cinza: "#8b8b93",
+  grade: "#26262b",
+  rotulo: "#a1a1aa",
 };
 
 const estado = {
@@ -277,7 +277,8 @@ function renderRitmo(porDia, total) {
       pointRadius: 0,
       pointHoverRadius: 4,
       pointHoverBackgroundColor: COR.dado,
-      fill: false,
+      fill: "origin",
+      backgroundColor: COR.area,
     },
   ];
   if (ehCarros && total.meta) {
@@ -316,7 +317,9 @@ function renderRitmo(porDia, total) {
       plugins: {
         legend: { display: false },
         tooltip: {
-          backgroundColor: "#141414",
+          backgroundColor: "#000000",
+          borderColor: "#e60012",
+          borderWidth: 1,
           padding: 10,
           displayColors: false,
           titleFont: { family: "Geist", weight: "500" },

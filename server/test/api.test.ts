@@ -145,10 +145,11 @@ describe("GET /api/analytics: parâmetros", () => {
     });
   }
   it("aceita mês e loja válidos e devolve a estrutura esperada", async () => {
-    const r = await fetch(`${base}/api/analytics?lojaId=${lojaId}&mes=2026-01`);
+    // 2001: fora de qualquer histórico gerado (o gerador cobre os 12 meses antes da data em que roda).
+    const r = await fetch(`${base}/api/analytics?lojaId=${lojaId}&mes=2001-02`);
     assert.equal(r.status, 200);
     const dados = await r.json();
-    assert.equal(dados.periodo.mes, "2026-01");
+    assert.equal(dados.periodo.mes, "2001-02");
     assert.equal(dados.kpis.vendas, 0, "mês sem histórico devolve zero, não erro");
     assert.equal(dados.metas.length, 1);
   });

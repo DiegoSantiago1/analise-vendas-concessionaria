@@ -7,7 +7,7 @@ import path from "node:path";
 dotenv.config({ path: path.resolve(import.meta.dirname, "../../.env") });
 
 export const pool = new Pool({
-  host: process.env.DB_HOST ?? "localhost",
+  host: process.env.DB_HOST ?? "127.0.0.1",
   port: Number(process.env.DB_PORT ?? 5432),
   user: process.env.DB_USER ?? "honda",
   password: process.env.DB_PASSWORD ?? "honda_dev_pw",

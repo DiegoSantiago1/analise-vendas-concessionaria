@@ -38,11 +38,11 @@ load_dotenv(Path(__file__).resolve().parent.parent / ".env")
 # ---------------------------------------------------------------------
 
 LOJAS = [
-    {"nome": "Loja Centro", "cidade": "Recife", "equipe_apelido": "Equipe Águia", "meta_mensal": 40},
-    {"nome": "Loja Norte", "cidade": "Recife", "equipe_apelido": "Equipe Falcão", "meta_mensal": 25},
-    {"nome": "Loja Sul", "cidade": "Jaboatão", "equipe_apelido": "Equipe Tornado", "meta_mensal": 20},
-    {"nome": "Loja Litoral", "cidade": "Cabo de Santo Agostinho", "equipe_apelido": "Equipe Maré", "meta_mensal": 18},
-    {"nome": "Loja Serra", "cidade": "Caruaru", "equipe_apelido": "Equipe Pedra Forte", "meta_mensal": 15},
+    {"nome": "Loja Centro", "cidade": "Recife", "equipe_apelido": "Equipe Águia", "meta_mensal": 60},
+    {"nome": "Loja Norte", "cidade": "Recife", "equipe_apelido": "Equipe Falcão", "meta_mensal": 45},
+    {"nome": "Loja Sul", "cidade": "Jaboatão", "equipe_apelido": "Equipe Tornado", "meta_mensal": 38},
+    {"nome": "Loja Litoral", "cidade": "Cabo de Santo Agostinho", "equipe_apelido": "Equipe Maré", "meta_mensal": 30},
+    {"nome": "Loja Serra", "cidade": "Caruaru", "equipe_apelido": "Equipe Pedra Forte", "meta_mensal": 25},
 ]
 
 # nome do gerente por loja (índice = mesmo índice de LOJAS)
@@ -56,11 +56,12 @@ GERENTES = [
 
 # vendedores por loja (índice = mesmo índice de LOJAS)
 VENDEDORES_POR_LOJA = [
-    ["Beatriz Cordeiro", "Gustavo Monteiro", "Larissa Pontes", "Rafael Duarte", "Vanessa Lira", "Eduardo Barros"],
-    ["Camila Teixeira", "Igor Salgado", "Renata Farias", "Vinicius Godoy"],
-    ["Aline Correia", "Bruno Salviano", "Priscila Amorim"],
-    ["Daniel Vieira", "Michele Cavalcanti", "Otávio Peixoto"],
-    ["Fabiana Rocha", "Leandro Siqueira"],
+    ["Beatriz Cordeiro", "Gustavo Monteiro", "Larissa Pontes", "Rafael Duarte", "Vanessa Lira", "Eduardo Barros",
+     "Natália Brandão", "Felipe Arruda"],
+    ["Camila Teixeira", "Igor Salgado", "Renata Farias", "Vinicius Godoy", "Juliana Melo", "Caio Bezerra"],
+    ["Aline Correia", "Bruno Salviano", "Priscila Amorim", "Henrique Lacerda", "Tatiana Rêgo"],
+    ["Daniel Vieira", "Michele Cavalcanti", "Otávio Peixoto", "Sabrina Lins"],
+    ["Fabiana Rocha", "Leandro Siqueira", "Mirela Toscano", "Paulo Sérgio Neves"],
 ]
 
 MODELOS = [
@@ -85,19 +86,28 @@ MODELOS = [
 
 FORMAS_PAGAMENTO = ["A vista", "Financiado", "Financiado", "Financiado", "Consorcio"]
 
+# Peso de cada modelo no sorteio (mesma ordem de MODELOS): os SUVs de entrada e o City
+# vendem mais; CR-V e Civic, mais caros, vendem menos. Valores ilustrativos.
+PESO_MODELO = [1.2, 1.4, 1.1, 0.7, 1.6, 1.3, 0.8, 2.4, 1.8, 2.6, 2.0, 1.2, 1.0, 0.6, 0.5, 0.35, 0.45]
+
+# Sazonalidade por mês (1 = janeiro): começo de ano fraco, dezembro forte.
+SAZONALIDADE = {1: 0.82, 2: 0.80, 3: 0.95, 4: 0.94, 5: 1.0, 6: 0.96, 7: 1.0, 8: 1.02, 9: 1.04, 10: 1.0, 11: 1.08, 12: 1.22}
+
 CLIENTES_FICTICIOS = [
     "João Pedro", "Ana Clara", "Marcos Vinicius", "Sofia Almeida", "Luiz Fernando",
     "Isabela Martins", "Pedro Henrique", "Juliana Prado", "Rodrigo Nascimento",
     "Carolina Freire", "André Luiz", "Mariana Costa", None, None, None,  # None = sem nome informado
 ]
 
-DIAS_DE_HISTORICO = 60  # dois meses de vendas, pra dar volume real pra análise
+DIAS_DE_HISTORICO = 365  # um ano de vendas: dá para navegar mês a mês e ver a sazonalidade
 
 
 def gerar_vendas(ancora: datetime) -> list[dict]:
     """Gera um histórico de vendas plausível: mais movimento em dias de
-    semana e no fim do mês (comportamento real de concessionária), com
-    cada loja vendendo perto (não exatamente) da própria meta.
+    semana, no fim do mês e em dezembro (comportamento real de concessionária),
+    com cada loja oscilando em volta da própria meta: em alguns meses bate, em
+    outros fica abaixo. Vendedores têm desempenhos diferentes e os modelos têm
+    popularidades diferentes.
     O histórico termina em `ancora` e cobre os DIAS_DE_HISTORICO dias antes."""
     random.seed(42)  # dentro da função: chamar duas vezes com a mesma âncora dá o mesmo resultado
     vendas = []
@@ -106,8 +116,10 @@ def gerar_vendas(ancora: datetime) -> list[dict]:
 
     for loja_idx, loja in enumerate(LOJAS):
         vendedores = VENDEDORES_POR_LOJA[loja_idx]
-        # ritmo de vendas por dia calibrado pra chegar perto da meta mensal
-        vendas_por_dia_media = loja["meta_mensal"] / 30 * 0.9
+        peso_vendedor = [random.uniform(0.6, 1.5) for _ in vendedores]  # uns vendem mais que outros
+        desempenho_mes: dict[tuple[int, int], float] = {}  # cada loja tem meses bons e ruins
+        # Ritmo diário que, com os fatores de dia útil e de fim de mês, dá ~100% da meta.
+        vendas_por_dia_media = loja["meta_mensal"] / 30 * 1.06
 
         dia = inicio
         while dia <= hoje:
@@ -116,12 +128,16 @@ def gerar_vendas(ancora: datetime) -> list[dict]:
             # mais vendas perto do fim do mês (meta batendo)
             fator_fim_mes = 1.6 if dia.day >= 25 else 1.0
 
-            lambda_dia = vendas_por_dia_media * fator_dia * fator_fim_mes
+            mes = (dia.year, dia.month)
+            if mes not in desempenho_mes:
+                desempenho_mes[mes] = random.gauss(1.0, 0.09)
+            lambda_dia = (vendas_por_dia_media * fator_dia * fator_fim_mes
+                          * SAZONALIDADE[dia.month] * desempenho_mes[mes])
             n_vendas_no_dia = max(0, round(random.gauss(lambda_dia, lambda_dia * 0.5)))
 
             for _ in range(n_vendas_no_dia):
-                vendedor = random.choice(vendedores)
-                modelo = random.choice(MODELOS)
+                vendedor = random.choices(vendedores, weights=peso_vendedor)[0]
+                modelo = random.choices(MODELOS, weights=PESO_MODELO)[0]
                 hora = random.randint(8, 18)
                 minuto = random.randint(0, 59)
                 timestamp = dia.replace(hour=hora, minute=minuto, second=0, microsecond=0)
@@ -147,7 +163,7 @@ def gerar_vendas(ancora: datetime) -> list[dict]:
 def montar_engine() -> sa.Engine:
     usuario = os.environ.get("DB_USER", "honda")
     senha = os.environ.get("DB_PASSWORD", "honda_dev_pw")
-    host = os.environ.get("DB_HOST", "localhost")
+    host = os.environ.get("DB_HOST", "127.0.0.1")
     porta = os.environ.get("DB_PORT", "5432")
     nome_banco = os.environ.get("DB_NAME", "vendas_honda")
     url = f"postgresql+psycopg://{usuario}:{senha}@{host}:{porta}/{nome_banco}"

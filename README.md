@@ -60,7 +60,7 @@ PostgreSQL 16 (Docker)  ──►  REST API (Node.js + TypeScript + Express)  �
 ```
 
 - **Database:** PostgreSQL 16 in a Docker container; the schema (`db/schema.sql`) is applied on first start through `docker-entrypoint-initdb.d`.
-- **Data generation:** a Python script (`scripts/gerar_dados_ficticios.py`) fills the database with stores, sales staff, the model catalog and about 60 days of fictional but plausible sales (more on weekdays and near month end).
+- **Data generation:** a Python script (`scripts/gerar_dados_ficticios.py`) fills the database with stores, sales staff, the model catalog and 12 months of fictional but plausible sales (about 200 cars a month across the network, more on weekdays, near month end and in December).
 - **API:** Node.js + TypeScript + Express 5, with hand-written SQL through `pg` (no ORM, on purpose; see below). It also serves the front end, so development is a single process (`npm run dev`).
 - **Front end:** plain HTML/CSS/JavaScript calling the API with `fetch`, and Chart.js for the charts. No framework: the screen did not justify React or Vue, and leaving it out kept the focus on back end, SQL and data modeling.
 
@@ -94,7 +94,7 @@ Full schema: [`db/schema.sql`](db/schema.sql).
 
 **A "bootstrap" endpoint.** `GET /api/bootstrap` returns the master data and the latest sales (stores, salespeople, models, feed) in one call, instead of the screen firing a cascade of requests each time it opens. I kept this idea from the original because it solved a real perceived-latency problem. The dashboard numbers come from `/api/analytics`.
 
-**Month filter as a range, not `date_trunc` on the column.** `WHERE criado_em >= month_start AND criado_em < next_month_start` lets PostgreSQL use the index on `criado_em`; `date_trunc('month', criado_em) = ...` applies a function to the column and forces a full table read. Measured on a test database with 1 million rows: 314 ms with `date_trunc` against 29 ms with the range. With this project's ~190 rows the difference does not show, but it is the kind of detail that decides whether a query scales.
+**Month filter as a range, not `date_trunc` on the column.** `WHERE criado_em >= month_start AND criado_em < next_month_start` lets PostgreSQL use the index on `criado_em`; `date_trunc('month', criado_em) = ...` applies a function to the column and forces a full table read. Measured on a test database with 1 million rows: 314 ms with `date_trunc` against 29 ms with the range. With this project's ~2,400 rows the difference does not show, but it is the kind of detail that decides whether a query scales.
 
 **Validation and errors.** Every input is validated at the edge: a body that is not JSON, wrong types, ids outside the `INT` range and names that are too long get a 400 (never a 500), and a duplicate salesperson gets a 409. The database stays the last barrier, so integrity does not depend on the API being right. `/api/health` queries the database (503 if it is down), and the connection pool handles the `error` event, so the API survives a PostgreSQL restart and recovers on its own.
 
@@ -108,7 +108,7 @@ Full schema: [`db/schema.sql`](db/schema.sql).
 
 ## Fictional data, on purpose
 
-All sales history comes from [`scripts/gerar_dados_ficticios.py`](scripts/gerar_dados_ficticios.py): 5 stores, 5 managers, 18 salespeople, 17 Honda models (public names, illustrative prices) and about 60 days of sales with plausible seasonality. Names of people, cities and targets are made up; no real data from the dealership where I work is in this repository. `random.seed(42)` fixes the draw, and the history is built backwards from an anchor date: with no argument the anchor is the day the script runs (so the dashboard always has sales "today"), and with `--ate YYYY-MM-DD` the same date always produces exactly the same data (checked by hashing the rows). The script is idempotent (`TRUNCATE ... RESTART IDENTITY CASCADE`). To be honest about it: the draw is uniform (every model and every salesperson in a store has the same chance), so the data serves the dashboard but does not hide patterns to "discover" in an analysis.
+All sales history comes from [`scripts/gerar_dados_ficticios.py`](scripts/gerar_dados_ficticios.py): 5 stores, 5 managers, 27 salespeople, 17 Honda models (public names, illustrative prices) and 12 months of sales with plausible seasonality (weak January and February, strong December), each store above its target in some months and below in others. Names of people, cities and targets are made up; no real data from the dealership where I work is in this repository. `random.seed(42)` fixes the draw, and the history is built backwards from an anchor date: with no argument the anchor is the day the script runs (so the dashboard always has sales "today"), and with `--ate YYYY-MM-DD` the same date always produces exactly the same data (checked by hashing the rows). The script is idempotent (`TRUNCATE ... RESTART IDENTITY CASCADE`). Models and salespeople are weighted (entry SUVs sell more than the CR-V; some salespeople sell more than others), but the weights are made up: the data serves the dashboard, not an analysis that would "discover" real patterns.
 
 ## Run it locally
 

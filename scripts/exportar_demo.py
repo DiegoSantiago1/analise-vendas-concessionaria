@@ -30,7 +30,7 @@ DESTINO = RAIZ / "demo" / "demo-data.json"
 def montar_engine() -> sa.Engine:
     usuario = os.environ.get("DB_USER", "honda")
     senha = os.environ.get("DB_PASSWORD", "honda_dev_pw")
-    host = os.environ.get("DB_HOST", "localhost")
+    host = os.environ.get("DB_HOST", "127.0.0.1")
     porta = os.environ.get("DB_PORT", "5432")
     nome_banco = os.environ.get("DB_NAME", "vendas_honda")
     return sa.create_engine(f"postgresql+psycopg://{usuario}:{senha}@{host}:{porta}/{nome_banco}")
